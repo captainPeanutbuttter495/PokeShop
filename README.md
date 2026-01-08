@@ -1,6 +1,6 @@
-## **Apartment Listing Web App**
+## **Pokemon Card Shop Web App**
 
-A modern apartment listing web application built with React, Vite, and Tailwind CSS.
+A modern card shop web application built with React, Vite, and Tailwind CSS.
 The project uses ESLint and Prettier for code quality and formatting.
 
 ## Features
@@ -17,8 +17,8 @@ The project uses ESLint and Prettier for code quality and formatting.
 
 Clone the repository and install dependencies:
 
-git clone https://github.com/your-username/Apartment_Listing.git
-cd Apartment_Listing
+git clone https://github.com/captainPeanutbuttter495/PokeShop.git
+cd PokeShop
 npm install
 
 ## Development
