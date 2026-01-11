@@ -6,8 +6,9 @@ import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
   globalIgnores(["dist"]),
+  // Client-side files (React)
   {
-    files: ["**/*.{js,jsx}"],
+    files: ["src/**/*.{js,jsx}", "client/**/*.{js,jsx}"],
     extends: [
       js.configs.recommended,
       reactHooks.configs["recommended-latest"],
@@ -21,6 +22,19 @@ export default defineConfig([
         ecmaFeatures: { jsx: true },
         sourceType: "module",
       },
+    },
+    rules: {
+      "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+    },
+  },
+  // Server-side files (Node.js)
+  {
+    files: ["server/**/*.js"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.node,
+      sourceType: "module",
     },
     rules: {
       "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
