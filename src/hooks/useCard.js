@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { getCard } from "../services/pokemonApi";
+import { useState, useEffect } from 'react';
+import { getCard } from '../services/pokemonApi';
 
 /**
  * Custom hook to fetch a Pokemon card by ID
@@ -17,23 +17,21 @@ export function useCard(cardId) {
       return;
     }
 
-    let isMounted = true;
+    const controller = new AbortController();
 
     async function fetchCard() {
       try {
         setLoading(true);
         setError(null);
         const data = await getCard(cardId);
-
-        if (isMounted) {
+        
+        if (!controller.signal.aborted) {
           setCard(data);
+          setLoading(false);
         }
       } catch (err) {
-        if (isMounted) {
+        if (!controller.signal.aborted) {
           setError(err.message);
-        }
-      } finally {
-        if (isMounted) {
           setLoading(false);
         }
       }
@@ -42,7 +40,7 @@ export function useCard(cardId) {
     fetchCard();
 
     return () => {
-      isMounted = false;
+      controller.abort();
     };
   }, [cardId]);
 
