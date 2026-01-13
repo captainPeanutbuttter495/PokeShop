@@ -10,10 +10,33 @@ const port = process.env.PORT || 3001;
 const POKEMON_API_BASE = "https://api.pokemontcg.io/v2";
 const API_KEY = process.env.POKEMON_API_KEY;
 
+// In-memory cache (persists while server is running)
+const cache = new Map();
+const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+
+function getCached(key) {
+  const item = cache.get(key);
+  if (!item) return null;
+
+  if (Date.now() > item.expiry) {
+    cache.delete(key);
+    return null;
+  }
+
+  return item.data;
+}
+
+function setCache(key, data) {
+  cache.set(key, {
+    data,
+    expiry: Date.now() + CACHE_DURATION,
+  });
+}
+
 // Enable CORS for the frontend
 app.use(
   cors({
-    origin: "http://localhost:5173", // Vite's default port
+    origin: "http://localhost:5173",
   }),
 );
 
@@ -21,24 +44,63 @@ app.use(express.json());
 
 // Health check
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", cacheSize: cache.size });
 });
+
+// Helper function to fetch with retries
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.ok) {
+        return response;
+      }
+
+      // If it's a 504 or 503, retry
+      if ((response.status === 504 || response.status === 503) && attempt < maxRetries) {
+        console.log(`⚠️ Attempt ${attempt} failed with ${response.status}, retrying...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt)); // Wait longer each retry
+        continue;
+      }
+
+      throw new Error(`Pokemon API responded with ${response.status}`);
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`⚠️ Attempt ${attempt} failed: ${error.message}, retrying...`);
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+    }
+  }
+}
 
 // Get a single card by ID
 app.get("/api/cards/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const response = await fetch(`${POKEMON_API_BASE}/cards/${id}`, {
+    const cacheKey = `card:${id}`;
+
+    const cached = getCached(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for card: ${id}`);
+      return res.json(cached);
+    }
+
+    console.log(`⏳ Fetching card from API: ${id}`);
+    const startTime = Date.now();
+
+    const response = await fetchWithRetry(`${POKEMON_API_BASE}/cards/${id}`, {
       headers: {
         "X-Api-Key": API_KEY,
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Pokemon API responded with ${response.status}`);
-    }
-
     const data = await response.json();
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ Fetched card in ${elapsed}ms: ${id}`);
+
+    setCache(cacheKey, data);
     res.json(data);
   } catch (error) {
     console.error("Error fetching card:", error);
@@ -50,21 +112,32 @@ app.get("/api/cards/:id", async (req, res) => {
 app.get("/api/cards", async (req, res) => {
   try {
     const queryParams = new URLSearchParams(req.query).toString();
+    const cacheKey = `cards:${queryParams}`;
+
+    const cached = getCached(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for search: ${queryParams}`);
+      return res.json(cached);
+    }
+
     const url = queryParams
       ? `${POKEMON_API_BASE}/cards?${queryParams}`
       : `${POKEMON_API_BASE}/cards`;
 
-    const response = await fetch(url, {
+    console.log(`⏳ Searching cards from API: ${queryParams}`);
+    const startTime = Date.now();
+
+    const response = await fetchWithRetry(url, {
       headers: {
         "X-Api-Key": API_KEY,
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Pokemon API responded with ${response.status}`);
-    }
-
     const data = await response.json();
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ Search completed in ${elapsed}ms`);
+
+    setCache(cacheKey, data);
     res.json(data);
   } catch (error) {
     console.error("Error searching cards:", error);
@@ -76,17 +149,23 @@ app.get("/api/cards", async (req, res) => {
 app.get("/api/sets/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const response = await fetch(`${POKEMON_API_BASE}/sets/${id}`, {
+    const cacheKey = `set:${id}`;
+
+    const cached = getCached(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for set: ${id}`);
+      return res.json(cached);
+    }
+
+    console.log(`⏳ Fetching set from API: ${id}`);
+    const response = await fetchWithRetry(`${POKEMON_API_BASE}/sets/${id}`, {
       headers: {
         "X-Api-Key": API_KEY,
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Pokemon API responded with ${response.status}`);
-    }
-
     const data = await response.json();
+    setCache(cacheKey, data);
     res.json(data);
   } catch (error) {
     console.error("Error fetching set:", error);
@@ -98,21 +177,26 @@ app.get("/api/sets/:id", async (req, res) => {
 app.get("/api/sets", async (req, res) => {
   try {
     const queryParams = new URLSearchParams(req.query).toString();
+    const cacheKey = `sets:${queryParams}`;
+
+    const cached = getCached(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for sets`);
+      return res.json(cached);
+    }
+
     const url = queryParams
       ? `${POKEMON_API_BASE}/sets?${queryParams}`
       : `${POKEMON_API_BASE}/sets`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         "X-Api-Key": API_KEY,
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Pokemon API responded with ${response.status}`);
-    }
-
     const data = await response.json();
+    setCache(cacheKey, data);
     res.json(data);
   } catch (error) {
     console.error("Error fetching sets:", error);
