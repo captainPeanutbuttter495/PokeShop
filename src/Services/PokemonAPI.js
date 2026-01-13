@@ -1,11 +1,19 @@
 const API_BASE = "http://localhost:3001/api";
 
+// Frontend cache - persists across component mounts
+const cardCache = new Map();
+
 /**
  * Fetch a single card by its ID
  * @param {string} id - The card ID (e.g., 'base1-4' for Charizard from Base Set)
  * @returns {Promise<object>} The card data
  */
 export async function getCard(id) {
+  // Check frontend cache first
+  if (cardCache.has(id)) {
+    return cardCache.get(id);
+  }
+
   const response = await fetch(`${API_BASE}/cards/${id}`);
 
   if (!response.ok) {
@@ -13,6 +21,10 @@ export async function getCard(id) {
   }
 
   const result = await response.json();
+
+  // Cache the result
+  cardCache.set(id, result.data);
+
   return result.data;
 }
 
