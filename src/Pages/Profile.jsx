@@ -12,23 +12,26 @@ import {
   submitSellerRequest,
 } from "../services/userApi";
 
-const POPULAR_POKEMON = [
-  { id: "25", name: "Pikachu" },
-  { id: "6", name: "Charizard" },
-  { id: "150", name: "Mewtwo" },
-  { id: "133", name: "Eevee" },
-  { id: "143", name: "Snorlax" },
-  { id: "94", name: "Gengar" },
-  { id: "149", name: "Dragonite" },
-  { id: "131", name: "Lapras" },
-  { id: "39", name: "Jigglypuff" },
-  { id: "54", name: "Psyduck" },
+const STARTER_POKEMON = [
+  // Gen 1
   { id: "1", name: "Bulbasaur" },
   { id: "4", name: "Charmander" },
   { id: "7", name: "Squirtle" },
+  // Gen 2
   { id: "152", name: "Chikorita" },
   { id: "155", name: "Cyndaquil" },
   { id: "158", name: "Totodile" },
+  // Gen 3
+  { id: "252", name: "Treecko" },
+  { id: "255", name: "Torchic" },
+  { id: "258", name: "Mudkip" },
+  // Gen 4
+  { id: "387", name: "Turtwig" },
+  { id: "390", name: "Chimchar" },
+  { id: "393", name: "Piplup" },
+  // Special
+  { id: "25", name: "Pikachu" },
+  { id: "151", name: "Mew" },
 ];
 
 const Profile = () => {
@@ -281,7 +284,7 @@ const Profile = () => {
                   className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   <option value="">Select a Pokemon...</option>
-                  {POPULAR_POKEMON.map((p) => (
+                  {STARTER_POKEMON.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
