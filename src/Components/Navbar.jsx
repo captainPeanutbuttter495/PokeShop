@@ -1,47 +1,13 @@
 // src/Components/Navbar.jsx
-import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Icon } from "@iconify/react";
-import { getProfile } from "../services/userApi";
+import { useUser } from "../context/UserContext";
 
 const Navbar = () => {
   const location = useLocation();
-  const {
-    loginWithRedirect,
-    logout,
-    user: auth0User,
-    isAuthenticated,
-    isLoading,
-    getAccessTokenSilently,
-  } = useAuth0();
-
-  // Database profile state
-  const [profile, setProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-
-  // Fetch profile from database when authenticated
-  useEffect(() => {
-    if (!isAuthenticated || isLoading) {
-      setProfile(null);
-      return;
-    }
-
-    const fetchProfile = async () => {
-      try {
-        setProfileLoading(true);
-        const data = await getProfile(getAccessTokenSilently);
-        setProfile(data.user);
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setProfile(null);
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [isAuthenticated, isLoading, getAccessTokenSilently]);
+  const { loginWithRedirect, logout, user: auth0User, isAuthenticated, isLoading } = useAuth0();
+  const { profile, profileLoading } = useUser();
 
   // Display name: prefer database username over Auth0 name
   const displayName = profile?.username || auth0User?.name || "User";

@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Icon } from "@iconify/react";
 import { Link } from "react-router-dom";
+import { useUser } from "../context/UserContext";
 import {
-  getProfile,
   createProfile,
   updateProfile,
   checkUsername,
@@ -42,10 +42,10 @@ const Profile = () => {
     user: auth0User,
   } = useAuth0();
 
-  // Profile state
-  const [profile, setProfile] = useState(null);
-  const [profileComplete, setProfileComplete] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Get profile from shared context
+  const { profile, profileComplete, profileLoading, updateProfileData } = useUser();
+
+  // Local state
   const [error, setError] = useState(null);
 
   // Form state
@@ -61,30 +61,13 @@ const Profile = () => {
   const [sellerReason, setSellerReason] = useState("");
   const [requestingSellerStatus, setRequestingSellerStatus] = useState(false);
 
-  // Fetch profile on mount
+  // Sync form state with profile from context
   useEffect(() => {
-    if (!isAuthenticated || authLoading) return;
-
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const data = await getProfile(getAccessTokenSilently);
-        setProfile(data.user);
-        setProfileComplete(data.profileComplete);
-
-        if (data.user) {
-          setUsername(data.user.username || "");
-          setFavoritePokemon(data.user.favoritePokemon || "");
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [isAuthenticated, authLoading, getAccessTokenSilently]);
+    if (profile) {
+      setUsername(profile.username || "");
+      setFavoritePokemon(profile.favoritePokemon || "");
+    }
+  }, [profile]);
 
   // Fetch seller request status
   useEffect(() => {
@@ -175,8 +158,8 @@ const Profile = () => {
             email: auth0User?.email,
           });
 
-      setProfile(data.user);
-      setProfileComplete(true);
+      // Update shared context so Navbar updates immediately
+      updateProfileData(data.user);
       setIsEditing(false);
     } catch (err) {
       setError(err.message);
@@ -200,7 +183,7 @@ const Profile = () => {
   };
 
   // Loading state
-  if (authLoading || loading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <Icon icon="mdi:loading" className="h-12 w-12 animate-spin text-red-800" />
