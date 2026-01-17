@@ -1,86 +1,186 @@
+// src/Components/Navbar.jsx
 import { useLocation, Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Icon } from "@iconify/react";
+import { useUser } from "../context/UserContext";
 
 const Navbar = () => {
   const location = useLocation();
-  const { loginWithRedirect, logout, user, isAuthenticated, isLoading } = useAuth0();
+  const { loginWithRedirect, logout, user: auth0User, isAuthenticated, isLoading } = useAuth0();
+  const { profile, profileLoading } = useUser();
+
+  // Display name: prefer database username over Auth0 name
+  const displayName = profile?.username || auth0User?.name || "User";
+
+  // Profile picture: prefer Pokemon sprite over Auth0 picture
+  const profilePicture = profile?.favoritePokemon
+    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${profile.favoritePokemon}.png`
+    : auth0User?.picture;
+
+  // Check if profile setup is needed
+  const needsProfileSetup = isAuthenticated && !isLoading && !profileLoading && !profile;
+
+  const navLinks = [
+    { path: "/", label: "Home", icon: "mdi:home" },
+    { path: "/shop", label: "Shop", icon: "mdi:store" },
+  ];
 
   return (
-    <nav className="bg-red-800 text-white">
+    <nav className="sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo/Brand */}
-          <div className="mb-3 flex items-center justify-center gap-2 sm:mb-0 sm:justify-start">
-            <Icon
-              icon="arcticons:pokemon-tcgp"
-              style={{ width: "48px", height: "48px", color: "#2a09ab" }}
-            />
-            <h1 className="text-xl font-bold sm:text-2xl">PokeShop</h1>
-            <Icon
-              icon="arcticons:pokemon-tcgp"
-              style={{ width: "48px", height: "48px", color: "#2a09ab" }}
-            />
-          </div>
+          <Link to="/" className="group flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 opacity-0 blur transition-opacity duration-300 group-hover:opacity-70" />
+              <div className="relative rounded-lg bg-slate-800 p-2">
+                <Icon
+                  icon="game-icons:pokemon"
+                  className="h-7 w-7 text-amber-400 transition-transform duration-300 group-hover:scale-110"
+                />
+              </div>
+            </div>
+            <span className="bg-gradient-to-r from-amber-200 to-amber-400 bg-clip-text text-xl font-bold text-transparent">
+              PokeShop
+            </span>
+          </Link>
 
-          {/* Menu Items */}
-          <div className="flex flex-col items-center space-y-2 sm:flex-row sm:space-x-4 sm:space-y-0">
-            <Link
-              to="/"
-              className={`rounded-md px-2 py-2 text-sm font-medium transition-all duration-300 hover:scale-110 sm:px-3 sm:text-base ${
-                location.pathname === "/" ? "text-black" : "hover:text-blue-400"
-              }`}
-            >
-              Homepage
-            </Link>
-            <Link
-              to="/shop"
-              className={`rounded-md px-2 py-2 text-sm font-medium transition-all duration-300 hover:scale-110 sm:px-3 sm:text-base ${
-                location.pathname === "/shop" ? "text-black" : "hover:text-blue-400"
-              }`}
-            >
-              Shop
-            </Link>
+          {/* Navigation Links */}
+          <div className="flex items-center gap-1">
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                    isActive
+                      ? "text-amber-400"
+                      : "text-slate-300 hover:text-white"
+                  }`}
+                >
+                  <Icon
+                    icon={link.icon}
+                    className={`h-4 w-4 transition-transform duration-300 group-hover:scale-110 ${
+                      isActive ? "text-amber-400" : ""
+                    }`}
+                  />
+                  <span>{link.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                  )}
+                </Link>
+              );
+            })}
+
+            {/* Divider */}
+            <div className="mx-2 h-6 w-px bg-slate-700" />
 
             {/* Auth Section */}
-            {isLoading ? (
-              <span className="px-3 py-2 text-sm">Loading...</span>
+            {isLoading || profileLoading ? (
+              <div className="flex h-9 w-9 items-center justify-center">
+                <Icon icon="mdi:loading" className="h-5 w-5 animate-spin text-slate-400" />
+              </div>
             ) : isAuthenticated ? (
               <div className="group relative">
-                {/* User Avatar and Name - Hover Trigger */}
-                <div className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-all duration-300">
-                  <img src={user?.picture} alt={user?.name} className="h-8 w-8 rounded-full" />
-                  <span className="hidden text-sm sm:inline">{user?.name}</span>
+                {/* User Avatar Button */}
+                <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all duration-300 hover:bg-slate-800">
+                  <div className="relative">
+                    {profilePicture ? (
+                      <img
+                        src={profilePicture}
+                        alt={displayName}
+                        className="h-8 w-8 rounded-full bg-slate-700 ring-2 ring-slate-600 transition-all duration-300 group-hover:ring-amber-400/50"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 ring-2 ring-slate-600 transition-all duration-300 group-hover:ring-amber-400/50">
+                        <Icon icon="mdi:account" className="h-5 w-5 text-slate-400" />
+                      </div>
+                    )}
+                    {/* Online indicator */}
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900 bg-emerald-500" />
+                  </div>
+                  <div className="hidden flex-col items-start sm:flex">
+                    <span className="text-sm font-medium text-white">{displayName}</span>
+                    {profile?.role && (
+                      <span
+                        className={`text-xs ${
+                          profile.role === "ADMIN"
+                            ? "text-purple-400"
+                            : profile.role === "SELLER"
+                              ? "text-emerald-400"
+                              : "text-slate-500"
+                        }`}
+                      >
+                        {profile.role.charAt(0) + profile.role.slice(1).toLowerCase()}
+                      </span>
+                    )}
+                  </div>
                   <Icon
                     icon="mdi:chevron-down"
-                    className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180"
+                    className="h-4 w-4 text-slate-400 transition-transform duration-300 group-hover:rotate-180"
                   />
-                </div>
+                </button>
 
                 {/* Dropdown Menu */}
-                <div className="invisible absolute right-0 top-full z-50 mt-1 w-48 rounded-md bg-white py-1 opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:opacity-100">
+                <div className="invisible absolute right-0 top-full z-50 mt-2 w-56 origin-top-right scale-95 rounded-xl border border-slate-700 bg-slate-800/95 p-2 opacity-0 shadow-xl backdrop-blur-xl transition-all duration-200 group-hover:visible group-hover:scale-100 group-hover:opacity-100">
+                  {/* User Info Header */}
+                  <div className="mb-2 border-b border-slate-700 px-3 pb-3 pt-1">
+                    <p className="text-sm font-medium text-white">{displayName}</p>
+                    <p className="text-xs text-slate-400">{auth0User?.email}</p>
+                  </div>
+
+                  {/* Profile Setup Warning */}
+                  {needsProfileSetup && (
+                    <Link
+                      to="/profile"
+                      className="mb-2 flex items-center gap-3 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-400 transition-colors hover:bg-amber-500/20"
+                    >
+                      <Icon icon="mdi:alert-circle" className="h-4 w-4" />
+                      Complete Profile
+                    </Link>
+                  )}
+
                   <Link
                     to="/profile"
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
                   >
-                    <Icon icon="mdi:account" className="h-4 w-4" />
+                    <Icon icon="mdi:account-circle" className="h-4 w-4" />
                     Profile
                   </Link>
+
+                  {/* Admin Dashboard Link */}
+                  {profile?.role === "ADMIN" && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-purple-400 transition-colors hover:bg-purple-500/10"
+                    >
+                      <Icon icon="mdi:shield-crown" className="h-4 w-4" />
+                      Admin Dashboard
+                    </Link>
+                  )}
+
+                  <div className="my-2 border-t border-slate-700" />
+
                   <button
                     onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10"
                   >
                     <Icon icon="mdi:logout" className="h-4 w-4" />
-                    Logout
+                    Sign Out
                   </button>
                 </div>
               </div>
             ) : (
               <button
                 onClick={() => loginWithRedirect()}
-                className="px-3 py-2 text-sm font-medium transition-all duration-300 hover:scale-110"
+                className="group relative overflow-hidden rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-amber-500/25 transition-all duration-300 hover:shadow-amber-500/40"
               >
-                Login
+                <span className="relative z-10 flex items-center gap-2">
+                  <Icon icon="mdi:login" className="h-4 w-4" />
+                  Sign In
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
             )}
           </div>

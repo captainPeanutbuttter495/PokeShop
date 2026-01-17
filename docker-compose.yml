@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pokeshop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pokeshop
+      POSTGRES_PASSWORD: pokeshop_dev_password
+      POSTGRES_DB: pokeshop
+    ports:
+      - "5432:5432"
+    volumes:
+      - pokeshop_data:/var/lib/postgresql/data
+
+volumes:
+  pokeshop_data:

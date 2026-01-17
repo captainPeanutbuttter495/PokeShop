@@ -1,8 +1,13 @@
+// server/server.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+// Import routes
+import userRoutes from "./routes/users.js";
+import adminRoutes from "./routes/admin.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -33,19 +38,28 @@ function setCache(key, data) {
   });
 }
 
-// Enable CORS for the frontend
+// Middleware
 app.use(
   cors({
     origin: "http://localhost:5173",
   }),
 );
-
 app.use(express.json());
 
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", cacheSize: cache.size });
 });
+
+// ============================================
+// User & Admin Routes (PostgreSQL/Prisma)
+// ============================================
+app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
+
+// ============================================
+// Pokemon TCG API Routes (with caching)
+// ============================================
 
 // Helper function to fetch with retries
 async function fetchWithRetry(url, options, maxRetries = 3) {
@@ -57,10 +71,9 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
         return response;
       }
 
-      // If it's a 504 or 503, retry
       if ((response.status === 504 || response.status === 503) && attempt < maxRetries) {
         console.log(`⚠️ Attempt ${attempt} failed with ${response.status}, retrying...`);
-        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt)); // Wait longer each retry
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
         continue;
       }
 
@@ -204,6 +217,21 @@ app.get("/api/sets", async (req, res) => {
   }
 });
 
+// ============================================
+// Error Handling
+// ============================================
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+
+  // Handle JWT errors
+  if (err.name === "UnauthorizedError") {
+    return res.status(401).json({ error: "Invalid or missing token" });
+  }
+
+  res.status(500).json({ error: "Internal server error" });
+});
+
 app.listen(port, () => {
   console.log(`🚀 PokeShop API server running on http://localhost:${port}`);
+  console.log(`📦 Database: PostgreSQL via Prisma`);
 });
