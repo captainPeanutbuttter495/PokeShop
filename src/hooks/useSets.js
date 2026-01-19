@@ -1,50 +1,26 @@
-import { useState, useEffect } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { getSet } from "../services/pokemonApi";
 
 /**
  * Custom hook to fetch multiple Pokemon sets by IDs
+ * Uses React Query for caching - data persists across navigation
  * @param {string[]} setIds - Array of set IDs to fetch
  * @returns {object} { sets, loading, error }
  */
 export function useSets(setIds) {
-  const [sets, setSets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const queries = useQueries({
+    queries: (setIds || []).map((id) => ({
+      queryKey: ["set", id],
+      queryFn: () => getSet(id),
+      enabled: !!id,
+    })),
+  });
 
-  useEffect(() => {
-    if (!setIds || setIds.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function fetchSets() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const setPromises = setIds.map((id) => getSet(id));
-        const results = await Promise.all(setPromises);
-
-        if (!controller.signal.aborted) {
-          setSets(results);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (!controller.signal.aborted) {
-          setError(err.message);
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchSets();
-
-    return () => {
-      controller.abort();
-    };
-  }, [setIds.join(",")]);
+  const loading = queries.some((q) => q.isLoading);
+  const sets = queries
+    .filter((q) => q.isSuccess && q.data)
+    .map((q) => q.data);
+  const error = queries.every((q) => q.isError) ? "Failed to load sets" : null;
 
   return { sets, loading, error };
 }

@@ -1,0 +1,77 @@
+service: pokeshop-api
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 512
+  timeout: 30
+
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: ${env:DATABASE_URL}
+    POKEMON_API_KEY: ${env:POKEMON_API_KEY}
+    AUTH0_DOMAIN: ${env:AUTH0_DOMAIN}
+    AUTH0_AUDIENCE: ${env:AUTH0_AUDIENCE}
+    FRONTEND_URL: ${env:FRONTEND_URL}
+
+  httpApi:
+    cors:
+      allowedOrigins:
+        - https://chrillspoketcg.click
+        - https://www.chrillspoketcg.click
+        - https://d2q6j9upt9u7yj.cloudfront.net
+        - http://localhost:5173
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Requested-With
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "arn:aws:logs:*:*:*"
+
+functions:
+  api:
+    handler: lambda.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+    # If you later move Lambda into a VPC, uncomment and provide values
+    # vpc:
+    #   securityGroupIds:
+    #     - ${env:LAMBDA_SECURITY_GROUP_ID}
+    #   subnetIds:
+    #     - ${env:PRIVATE_SUBNET_1}
+    #     - ${env:PRIVATE_SUBNET_2}
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3001
+    noPrependStageInUrl: true
+
+package:
+  individually: true
+  artifact: dist-lambda.zip

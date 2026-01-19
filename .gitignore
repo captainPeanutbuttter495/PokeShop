@@ -39,9 +39,24 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.production.template
+
+# Serverless
+.serverless/
+
+# AWS
+.aws-sam/
 
 
 .vscode
 
 # Documentation
 Pokemon Card Shop Documentation/
+
+# Lambda build artifacts
+dist-lambda/
+dist-lambda.zip
+
+# Claude Code
+.claude/
