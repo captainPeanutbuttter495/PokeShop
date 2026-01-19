@@ -38,6 +38,8 @@ function setCache(key, data) {
 // Middleware - Allow CloudFront/S3 origin
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  "https://chrillspoketcg.click",
+  "https://www.chrillspoketcg.click",
   "https://d2q6j9upt9u7yj.cloudfront.net",
   "http://localhost:5173",
 ].filter(Boolean);

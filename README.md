@@ -1,5 +1,7 @@
 # PokeShop
 
+**Live Site:** https://chrillspoketcg.click
+
 A Pokemon card shop web application built with React, Express, Prisma, and the Pokemon TCG API. Browse real card data with market prices, manage your profile with Pokemon avatars, and explore a modern dark-themed interface.
 
 ## Features
@@ -36,6 +38,8 @@ A Pokemon card shop web application built with React, Express, Prisma, and the P
 | API            | Pokemon TCG API                           |
 | Build Tool     | Vite                                      |
 | Icons          | Iconify React                             |
+| Hosting        | AWS (S3, CloudFront, Lambda, RDS)         |
+| Caching        | React Query with localStorage persistence |
 
 ## Getting Started
 
@@ -113,7 +117,7 @@ Detailed documentation is available in the `Pokemon Card Shop Documentation/Poke
 - [ ] Shop page with card browsing and search
 - [ ] Filter and sort functionality
 - [ ] Shopping cart
-- [ ] AWS deployment (EC2, Terraform)
+- [x] AWS deployment (S3, CloudFront, Lambda, RDS, Route 53)
 
 ## Credits
 

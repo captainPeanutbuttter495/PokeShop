@@ -19,6 +19,8 @@ provider:
   httpApi:
     cors:
       allowedOrigins:
+        - https://chrillspoketcg.click
+        - https://www.chrillspoketcg.click
         - https://d2q6j9upt9u7yj.cloudfront.net
         - http://localhost:5173
       allowedHeaders:

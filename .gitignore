@@ -57,3 +57,6 @@ Pokemon Card Shop Documentation/
 # Lambda build artifacts
 dist-lambda/
 dist-lambda.zip
+
+# Claude Code
+.claude/
