@@ -322,23 +322,23 @@ const Profile = () => {
     <div className="min-h-screen bg-gray-100 px-4 py-12">
       <div className="mx-auto max-w-2xl">
         {/* Profile Card */}
-        <div className="mb-6 rounded-lg bg-white p-8 shadow-lg">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
+        <div className="mb-6 rounded-lg bg-white p-4 shadow-lg sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
               {profile.favoritePokemon ? (
                 <img
                   src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${profile.favoritePokemon}.png`}
                   alt="Profile"
-                  className="h-20 w-20 rounded-full bg-gray-100"
+                  className="h-16 w-16 flex-shrink-0 rounded-full bg-gray-100 sm:h-20 sm:w-20"
                 />
               ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-200">
-                  <Icon icon="mdi:account" className="h-10 w-10 text-gray-500" />
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 sm:h-20 sm:w-20">
+                  <Icon icon="mdi:account" className="h-8 w-8 text-gray-500 sm:h-10 sm:w-10" />
                 </div>
               )}
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{profile.username}</h1>
-                <p className="text-gray-600">{profile.email}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-xl font-bold text-gray-900 sm:text-2xl">{profile.username}</h1>
+                <p className="truncate text-sm text-gray-600 sm:text-base">{profile.email}</p>
                 <div className="mt-1 flex items-center gap-2">
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -356,7 +356,7 @@ const Profile = () => {
             </div>
             <button
               onClick={() => setIsEditing(true)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 sm:w-auto sm:py-1.5"
             >
               Edit Profile
             </button>

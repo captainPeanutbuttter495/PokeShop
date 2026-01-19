@@ -19,12 +19,12 @@ const SetCarousel = () => {
 
   if (loading) {
     return (
-      <section className="overflow-hidden bg-slate-900 py-12">
-        <div className="flex gap-8">
+      <section className="overflow-hidden bg-slate-900 py-6 sm:py-12">
+        <div className="flex gap-4 sm:gap-8">
           {[...Array(7)].map((_, i) => (
             <div
               key={i}
-              className="h-32 w-32 flex-shrink-0 animate-pulse rounded-xl bg-slate-800"
+              className="h-16 w-24 flex-shrink-0 animate-pulse rounded-lg bg-slate-800 sm:h-32 sm:w-32 sm:rounded-xl"
             />
           ))}
         </div>
@@ -36,14 +36,14 @@ const SetCarousel = () => {
     return null;
   }
 
-  // Duplicate sets for seamless infinite scroll
-  const duplicatedSets = [...sets, ...sets];
+  // Create enough duplicates to fill the screen and enable seamless looping
+  const duplicatedSets = [...sets, ...sets, ...sets, ...sets];
 
   return (
-    <section className="overflow-hidden bg-slate-900 py-12">
+    <section className="overflow-hidden bg-slate-900 py-6 sm:py-12">
       {/* Section Header */}
-      <div className="mx-auto mb-8 max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mx-auto mb-4 max-w-7xl px-4 sm:mb-8 sm:px-6 lg:px-8">
+        <h2 className="text-center text-xs font-semibold uppercase tracking-wider text-slate-500 sm:text-sm">
           Featured Collections
         </h2>
       </div>
@@ -51,23 +51,23 @@ const SetCarousel = () => {
       {/* Infinite Scroll Container */}
       <div className="relative">
         {/* Gradient Fade Left */}
-        <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-32 bg-gradient-to-r from-slate-900 to-transparent" />
+        <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-slate-900 to-transparent sm:w-32" />
 
         {/* Gradient Fade Right */}
-        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-32 bg-gradient-to-l from-slate-900 to-transparent" />
+        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-slate-900 to-transparent sm:w-32" />
 
-        {/* Scrolling Track */}
-        <div className="flex animate-scroll gap-8">
+        {/* Scrolling Track - using two identical tracks for seamless loop */}
+        <div className="flex w-max animate-scroll">
           {duplicatedSets.map((set, index) => (
             <div
               key={`${set.id}-${index}`}
-              className="flex-shrink-0"
+              className="mx-2 flex-shrink-0 sm:mx-4"
             >
-              <div className="rounded-xl bg-slate-800 p-4">
+              <div className="rounded-lg bg-slate-800 p-2 sm:rounded-xl sm:p-4">
                 <img
                   src={set.images.logo}
                   alt={set.name}
-                  className="h-20 w-auto object-contain"
+                  className="h-12 w-auto min-w-[80px] object-contain sm:h-20 sm:min-w-[120px]"
                 />
               </div>
             </div>
@@ -82,12 +82,12 @@ const SetCarousel = () => {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(-50%);
+            transform: translateX(-25%);
           }
         }
 
         .animate-scroll {
-          animation: scroll 30s linear infinite;
+          animation: scroll 20s linear infinite;
         }
       `}</style>
     </section>
