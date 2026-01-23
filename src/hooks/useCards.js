@@ -13,14 +13,22 @@ export function useCards(cardIds) {
       queryKey: ["card", id],
       queryFn: () => getCard(id),
       enabled: !!id,
+      staleTime: 1000 * 60 * 30, // 30 minutes - don't refetch if we have data
+      gcTime: 1000 * 60 * 60, // 1 hour cache
     })),
   });
 
-  const loading = queries.some((q) => q.isLoading);
-  const cards = queries
-    .filter((q) => q.isSuccess && q.data)
-    .map((q) => q.data);
-  const error = queries.every((q) => q.isError) ? "Failed to load cards" : null;
+  // React Query populates data from cache synchronously on mount
+  const cards = queries.map((q) => q.data).filter(Boolean);
+
+  // Show loading until ALL cards are ready (prevents incremental display)
+  const allLoaded = cardIds?.length > 0 && cards.length === cardIds.length;
+  const loading = !allLoaded && queries.some((q) => q.isLoading || q.isPending);
+
+  const error =
+    cards.length === 0 && queries.every((q) => q.isError)
+      ? "Failed to load cards"
+      : null;
 
   return { cards, loading, error };
 }

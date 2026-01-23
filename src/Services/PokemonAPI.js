@@ -5,6 +5,9 @@ const API_BASE = import.meta.env.VITE_API_URL
 // Frontend cache - persists across component mounts
 const cardCache = new Map();
 
+// Only fetch fields needed by the UI (reduces payload size significantly)
+const CARD_SELECT_FIELDS = "id,name,rarity,images,set,tcgplayer";
+
 /**
  * Fetch a single card by its ID
  * @param {string} id - The card ID (e.g., 'base1-4' for Charizard from Base Set)
@@ -16,7 +19,9 @@ export async function getCard(id) {
     return cardCache.get(id);
   }
 
-  const response = await fetch(`${API_BASE}/cards/${id}`);
+  const response = await fetch(
+    `${API_BASE}/cards/${id}?select=${CARD_SELECT_FIELDS}`
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch card: ${response.status}`);
@@ -48,13 +53,18 @@ export async function searchCards(params = {}) {
   return response.json();
 }
 
+// Only fetch fields needed by the UI for sets
+const SET_SELECT_FIELDS = "id,name,images";
+
 /**
  * Fetch a single set by its ID
  * @param {string} id - The set ID (e.g., 'base1' for Base Set)
  * @returns {Promise<object>} The set data
  */
 export async function getSet(id) {
-  const response = await fetch(`${API_BASE}/sets/${id}`);
+  const response = await fetch(
+    `${API_BASE}/sets/${id}?select=${SET_SELECT_FIELDS}`
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch set: ${response.status}`);

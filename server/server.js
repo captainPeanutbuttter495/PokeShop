@@ -92,7 +92,10 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
 app.get("/api/cards/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const cacheKey = `card:${id}`;
+    const { select } = req.query;
+
+    // Include select in cache key so different field selections are cached separately
+    const cacheKey = select ? `card:${id}:${select}` : `card:${id}`;
 
     const cached = getCached(cacheKey);
     if (cached) {
@@ -100,10 +103,15 @@ app.get("/api/cards/:id", async (req, res) => {
       return res.json(cached);
     }
 
+    // Build URL with select parameter if provided
+    const url = select
+      ? `${POKEMON_API_BASE}/cards/${id}?select=${select}`
+      : `${POKEMON_API_BASE}/cards/${id}`;
+
     console.log(`⏳ Fetching card from API: ${id}`);
     const startTime = Date.now();
 
-    const response = await fetchWithRetry(`${POKEMON_API_BASE}/cards/${id}`, {
+    const response = await fetchWithRetry(url, {
       headers: {
         "X-Api-Key": API_KEY,
       },
@@ -162,7 +170,10 @@ app.get("/api/cards", async (req, res) => {
 app.get("/api/sets/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const cacheKey = `set:${id}`;
+    const { select } = req.query;
+
+    // Include select in cache key so different field selections are cached separately
+    const cacheKey = select ? `set:${id}:${select}` : `set:${id}`;
 
     const cached = getCached(cacheKey);
     if (cached) {
@@ -170,8 +181,13 @@ app.get("/api/sets/:id", async (req, res) => {
       return res.json(cached);
     }
 
+    // Build URL with select parameter if provided
+    const url = select
+      ? `${POKEMON_API_BASE}/sets/${id}?select=${select}`
+      : `${POKEMON_API_BASE}/sets/${id}`;
+
     console.log(`⏳ Fetching set from API: ${id}`);
-    const response = await fetchWithRetry(`${POKEMON_API_BASE}/sets/${id}`, {
+    const response = await fetchWithRetry(url, {
       headers: {
         "X-Api-Key": API_KEY,
       },

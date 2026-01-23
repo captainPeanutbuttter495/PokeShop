@@ -37,10 +37,12 @@ function saveCache(cache) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes - data stays fresh
+      staleTime: 1000 * 60 * 30, // 30 minutes - data stays fresh, no refetch
       gcTime: 1000 * 60 * 60, // 1 hour - cache persists
       retry: 2,
       refetchOnWindowFocus: false,
+      refetchOnMount: false, // Don't refetch when component remounts
+      refetchOnReconnect: false, // Don't refetch on reconnect
     },
   },
 });
