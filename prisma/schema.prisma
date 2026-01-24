@@ -20,6 +20,12 @@ enum RequestStatus {
   REJECTED
 }
 
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
 model User {
   id              String   @id @default(uuid())
   auth0Id         String   @unique @map("auth0_id")
@@ -33,6 +39,7 @@ model User {
 
   sellerRequests   SellerRequest[] @relation("UserRequests")
   reviewedRequests SellerRequest[] @relation("AdminReviews")
+  cardListings     CardListing[]   @relation("UserListings")
 
   @@map("users")
 }
@@ -52,4 +59,20 @@ model SellerRequest {
   reviewedBy User? @relation("AdminReviews", fields: [reviewedById], references: [id])
 
   @@map("seller_requests")
+}
+
+model CardListing {
+  id        String        @id @default(uuid())
+  sellerId  String        @map("seller_id")
+  cardName  String        @map("card_name")
+  setName   String        @map("set_name")
+  price     Decimal       @db.Decimal(10, 2)
+  imageUrl  String?       @map("image_url")
+  status    ListingStatus @default(ACTIVE)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  seller User @relation("UserListings", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@map("card_listings")
 }

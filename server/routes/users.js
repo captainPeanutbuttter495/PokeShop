@@ -116,6 +116,46 @@ router.patch("/profile", authenticated, async (req, res) => {
   }
 });
 
+// GET /api/users/sellers - Get all active sellers (public endpoint)
+router.get("/sellers", async (req, res) => {
+  try {
+    const { exclude } = req.query;
+
+    const where = {
+      role: { in: ["SELLER", "ADMIN"] },
+      isActive: true,
+    };
+
+    // Optionally exclude a user by ID
+    if (exclude) {
+      where.id = { not: exclude };
+    }
+
+    const sellers = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        favoritePokemon: true,
+        createdAt: true,
+        _count: {
+          select: {
+            cardListings: {
+              where: { status: "ACTIVE" },
+            },
+          },
+        },
+      },
+      orderBy: { username: "asc" },
+    });
+
+    res.json({ sellers });
+  } catch (error) {
+    console.error("Error fetching sellers:", error);
+    res.status(500).json({ error: "Failed to fetch sellers" });
+  }
+});
+
 // GET /api/users/check-username/:username - Check availability
 router.get("/check-username/:username", async (req, res) => {
   try {
@@ -127,6 +167,51 @@ router.get("/check-username/:username", async (req, res) => {
     res.json({ available: !existing });
   } catch (error) {
     res.status(500).json({ error: "Failed to check username" });
+  }
+});
+
+// GET /api/users/sellers/:username - Get seller profile and active listings (public)
+router.get("/sellers/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const seller = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+        favoritePokemon: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        cardListings: {
+          where: { status: "ACTIVE" },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            cardName: true,
+            setName: true,
+            price: true,
+            imageUrl: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!seller) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    // Check if user is actually a seller and active
+    if (!["SELLER", "ADMIN"].includes(seller.role) || !seller.isActive) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    res.json({ seller });
+  } catch (error) {
+    console.error("Error fetching seller:", error);
+    res.status(500).json({ error: "Failed to fetch seller" });
   }
 });
 

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.11.0",
+    "@aws-sdk/client-s3": "^3.975.0",
     "@iconify/react": "^6.0.2",
     "@prisma/client": "^6.19.2",
     "@tanstack/react-query": "^5.90.19",
@@ -31,6 +32,7 @@
     "express": "^4.21.0",
     "express-jwt": "^8.5.1",
     "jwks-rsa": "^3.2.0",
+    "multer": "^1.4.5-lts.1",
     "prisma": "^6.19.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

@@ -51,6 +51,34 @@ export async function checkUsername(username) {
   return response.json();
 }
 
+/**
+ * Get all active sellers (public endpoint)
+ * @param {string} [excludeId] - Optional user ID to exclude from results
+ */
+export async function getSellers(excludeId = null) {
+  const query = excludeId ? `?exclude=${excludeId}` : "";
+  const response = await fetch(`${API_BASE}/users/sellers${query}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch sellers");
+  }
+  return response.json();
+}
+
+/**
+ * Get a seller's profile and active listings by username (public endpoint)
+ * @param {string} username - The seller's username
+ */
+export async function getSellerByUsername(username) {
+  const response = await fetch(`${API_BASE}/users/sellers/${encodeURIComponent(username)}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Seller not found");
+    }
+    throw new Error("Failed to fetch seller");
+  }
+  return response.json();
+}
+
 // ============================================
 // Seller Requests
 // ============================================
