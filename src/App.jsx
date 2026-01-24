@@ -8,6 +8,8 @@ import HomePage from "./Pages/HomePage";
 import Shop from "./Pages/Shop";
 import Profile from "./Pages/Profile";
 import AdminDashboard from "./Pages/AdminDashboard";
+import SellerDashboard from "./Pages/SellerDashboard";
+import SellerStorefront from "./Pages/SellerStorefront";
 
 const App = () => {
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
@@ -31,8 +33,10 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/shop" element={<Shop />} />
+                <Route path="/shop/:username" element={<SellerStorefront />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/seller" element={<SellerDashboard />} />
               </Routes>
             </main>
             <Footer />

@@ -8,6 +8,7 @@ dotenv.config();
 // Import routes
 import userRoutes from "./routes/users.js";
 import adminRoutes from "./routes/admin.js";
+import sellerRoutes from "./routes/seller.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -56,6 +57,7 @@ app.get("/api/health", (req, res) => {
 // ============================================
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/seller", sellerRoutes);
 
 // ============================================
 // Pokemon TCG API Routes (with caching)

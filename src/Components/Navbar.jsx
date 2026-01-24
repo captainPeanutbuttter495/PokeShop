@@ -151,6 +151,17 @@ const Navbar = () => {
                     Profile
                   </Link>
 
+                  {/* Seller Dashboard Link */}
+                  {(profile?.role === "SELLER" || profile?.role === "ADMIN") && (
+                    <Link
+                      to="/seller"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-emerald-400 transition-colors hover:bg-emerald-500/10"
+                    >
+                      <Icon icon="mdi:store" className="h-4 w-4" />
+                      Seller Dashboard
+                    </Link>
+                  )}
+
                   {/* Admin Dashboard Link */}
                   {profile?.role === "ADMIN" && (
                     <Link
@@ -259,6 +270,16 @@ const Navbar = () => {
                   <Icon icon="mdi:account-circle" className="h-5 w-5" />
                   Profile
                 </Link>
+                {(profile?.role === "SELLER" || profile?.role === "ADMIN") && (
+                  <Link
+                    to="/seller"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10"
+                  >
+                    <Icon icon="mdi:store" className="h-5 w-5" />
+                    Seller Dashboard
+                  </Link>
+                )}
                 {profile?.role === "ADMIN" && (
                   <Link
                     to="/admin"
