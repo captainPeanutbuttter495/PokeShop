@@ -6,6 +6,7 @@ import cors from "cors";
 // Import routes
 import userRoutes from "./routes/users.js";
 import adminRoutes from "./routes/admin.js";
+import sellerRoutes from "./routes/seller.js";
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.get("/api/health", (req, res) => {
 // User & Admin Routes (PostgreSQL/Prisma)
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/seller", sellerRoutes);
 
 // Helper function to fetch with retries
 async function fetchWithRetry(url, options, maxRetries = 3) {
