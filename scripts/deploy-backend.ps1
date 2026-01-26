@@ -16,7 +16,7 @@ if (Test-Path ".env.production") {
 }
 
 # Check required variables
-$requiredVars = @("DATABASE_URL", "AUTH0_DOMAIN", "AUTH0_AUDIENCE", "POKEMON_API_KEY")
+$requiredVars = @("DATABASE_URL", "AUTH0_DOMAIN", "AUTH0_AUDIENCE", "POKEMON_API_KEY", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "AWS_S3_BUCKET")
 foreach ($var in $requiredVars) {
     if (-not [Environment]::GetEnvironmentVariable($var, "Process")) {
         Write-Error "$var is not set. Please set it in .env.production"
