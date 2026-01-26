@@ -76,6 +76,7 @@ const CheckoutSuccess = () => {
   // Not authenticated but have public info - show order summary
   if (!isAuthenticated && publicInfo) {
     const isCompleted = publicInfo.status === "COMPLETED";
+    const isOrderGroup = publicInfo.type === "orderGroup";
 
     return (
       <div className="min-h-screen bg-gray-100">
@@ -92,24 +93,58 @@ const CheckoutSuccess = () => {
 
           <div className="overflow-hidden rounded-xl bg-white shadow-lg">
             <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-              <h2 className="font-semibold text-gray-900">Order Summary</h2>
+              <h2 className="font-semibold text-gray-900">
+                Order Summary{isOrderGroup ? ` (${publicInfo.items.length} items)` : ""}
+              </h2>
             </div>
-            <div className="p-6">
-              <div className="mb-6 flex gap-4">
-                {publicInfo.imageUrl ? (
-                  <img src={publicInfo.imageUrl} alt={publicInfo.cardName} className="h-32 w-24 rounded-lg object-cover shadow" />
-                ) : (
-                  <div className="flex h-32 w-24 items-center justify-center rounded-lg bg-gray-100">
-                    <Icon icon="mdi:image-off" className="h-8 w-8 text-gray-300" />
+            <div className={isOrderGroup ? "divide-y divide-gray-200" : "p-6"}>
+              {isOrderGroup ? (
+                // Cart order - show multiple items
+                <>
+                  {publicInfo.items.map((item, index) => (
+                    <div key={index} className="flex gap-4 p-4">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.cardName} className="h-24 w-18 rounded-lg object-cover shadow" />
+                      ) : (
+                        <div className="flex h-24 w-18 items-center justify-center rounded-lg bg-gray-100">
+                          <Icon icon="mdi:image-off" className="h-6 w-6 text-gray-300" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{item.cardName}</h3>
+                        <p className="text-sm text-gray-500">{item.setName}</p>
+                        <p className="text-sm text-gray-500">Sold by {item.sellerUsername}</p>
+                        <p className="mt-1 font-bold text-emerald-600">{formatPrice(item.amount)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="bg-gray-50 p-4">
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-gray-900">Total</span>
+                      <span className="text-lg font-bold text-emerald-600">
+                        {formatPrice(publicInfo.totalAmount)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">{publicInfo.cardName}</h3>
-                  <p className="text-sm text-gray-500">{publicInfo.setName}</p>
-                  <p className="mt-2 text-2xl font-bold text-emerald-600">{formatPrice(publicInfo.amount)}</p>
-                  <p className="mt-1 text-sm text-gray-500">Sold by {publicInfo.sellerUsername}</p>
+                </>
+              ) : (
+                // Single order
+                <div className="mb-6 flex gap-4">
+                  {publicInfo.imageUrl ? (
+                    <img src={publicInfo.imageUrl} alt={publicInfo.cardName} className="h-32 w-24 rounded-lg object-cover shadow" />
+                  ) : (
+                    <div className="flex h-32 w-24 items-center justify-center rounded-lg bg-gray-100">
+                      <Icon icon="mdi:image-off" className="h-8 w-8 text-gray-300" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">{publicInfo.cardName}</h3>
+                    <p className="text-sm text-gray-500">{publicInfo.setName}</p>
+                    <p className="mt-2 text-2xl font-bold text-emerald-600">{formatPrice(publicInfo.amount)}</p>
+                    <p className="mt-1 text-sm text-gray-500">Sold by {publicInfo.sellerUsername}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
