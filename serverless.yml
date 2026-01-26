@@ -17,6 +17,8 @@ provider:
     FRONTEND_URL: ${env:FRONTEND_URL}
     AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
     AWS_S3_REGION: ${env:AWS_REGION, 'us-east-1'}
+    STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
+    STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET}
 
   httpApi:
     cors:
