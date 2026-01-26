@@ -26,6 +26,13 @@ enum ListingStatus {
   CANCELLED
 }
 
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 model User {
   id              String   @id @default(uuid())
   auth0Id         String   @unique @map("auth0_id")
@@ -40,6 +47,8 @@ model User {
   sellerRequests   SellerRequest[] @relation("UserRequests")
   reviewedRequests SellerRequest[] @relation("AdminReviews")
   cardListings     CardListing[]   @relation("UserListings")
+  buyerOrders      Order[]         @relation("BuyerOrders")
+  sellerOrders     Order[]         @relation("SellerOrders")
 
   @@map("users")
 }
@@ -72,7 +81,30 @@ model CardListing {
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
 
-  seller User @relation("UserListings", fields: [sellerId], references: [id], onDelete: Cascade)
+  seller User    @relation("UserListings", fields: [sellerId], references: [id], onDelete: Cascade)
+  orders Order[]
 
   @@map("card_listings")
+}
+
+model Order {
+  id                      String      @id @default(uuid())
+  buyerId                 String      @map("buyer_id")
+  sellerId                String      @map("seller_id")
+  listingId               String      @map("listing_id")
+  amount                  Decimal     @db.Decimal(10, 2)
+  status                  OrderStatus @default(PENDING)
+  stripeCheckoutSessionId String?     @unique @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String?     @unique @map("stripe_payment_intent_id")
+  paidAt                  DateTime?   @map("paid_at")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
+
+  buyer   User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller  User        @relation("SellerOrders", fields: [sellerId], references: [id])
+  listing CardListing @relation(fields: [listingId], references: [id])
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@map("orders")
 }
