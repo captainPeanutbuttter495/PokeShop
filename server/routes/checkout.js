@@ -11,6 +11,7 @@ router.get("/verify/:sessionId", async (req, res) => {
   try {
     const { sessionId } = req.params;
 
+    // First try to find a single order
     const order = await prisma.order.findUnique({
       where: { stripeCheckoutSessionId: sessionId },
       include: {
@@ -23,19 +24,53 @@ router.get("/verify/:sessionId", async (req, res) => {
       },
     });
 
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    if (order) {
+      // Return limited info for public endpoint (single order)
+      return res.json({
+        type: "order",
+        status: order.status,
+        cardName: order.listing.cardName,
+        setName: order.listing.setName,
+        imageUrl: order.listing.imageUrl,
+        sellerUsername: order.seller.username,
+        amount: order.amount,
+      });
     }
 
-    // Return limited info for public endpoint
-    res.json({
-      status: order.status,
-      cardName: order.listing.cardName,
-      setName: order.listing.setName,
-      imageUrl: order.listing.imageUrl,
-      sellerUsername: order.seller.username,
-      amount: order.amount,
+    // If no single order, try to find an order group (cart checkout)
+    const orderGroup = await prisma.orderGroup.findUnique({
+      where: { stripeCheckoutSessionId: sessionId },
+      include: {
+        orderItems: {
+          include: {
+            listing: {
+              select: { cardName: true, setName: true, imageUrl: true },
+            },
+            seller: {
+              select: { username: true },
+            },
+          },
+        },
+      },
     });
+
+    if (orderGroup) {
+      // Return limited info for public endpoint (cart order)
+      return res.json({
+        type: "orderGroup",
+        status: orderGroup.status,
+        totalAmount: orderGroup.totalAmount,
+        items: orderGroup.orderItems.map((item) => ({
+          cardName: item.listing.cardName,
+          setName: item.listing.setName,
+          imageUrl: item.listing.imageUrl,
+          sellerUsername: item.seller.username,
+          amount: item.amount,
+        })),
+      });
+    }
+
+    return res.status(404).json({ error: "Order not found" });
   } catch (error) {
     console.error("Error verifying checkout:", error);
     res.status(500).json({ error: "Failed to verify checkout" });
