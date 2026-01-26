@@ -4,6 +4,7 @@ import { useLocation, Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Icon } from "@iconify/react";
 import { useUser } from "../context/UserContext";
+import CartIcon from "./CartIcon";
 
 const Navbar = () => {
   const location = useLocation();
@@ -74,6 +75,9 @@ const Navbar = () => {
                 </Link>
               );
             })}
+
+            {/* Cart Icon */}
+            <CartIcon />
 
             {/* Divider */}
             <div className="mx-2 h-6 w-px bg-slate-700" />
@@ -208,6 +212,9 @@ const Navbar = () => {
 
           {/* Mobile Menu Button & Auth */}
           <div className="flex items-center gap-2 sm:hidden">
+            {/* Mobile Cart Icon */}
+            <CartIcon />
+
             {/* Mobile Auth */}
             {isLoading || profileLoading ? (
               <Icon icon="mdi:loading" className="h-5 w-5 animate-spin text-slate-400" />
