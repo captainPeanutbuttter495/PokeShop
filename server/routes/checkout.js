@@ -147,7 +147,7 @@ router.get("/session/:sessionId", async (req, res) => {
   try {
     const { sessionId } = req.params;
 
-    // Find order by Stripe session ID
+    // First try to find a single order
     const order = await prisma.order.findUnique({
       where: { stripeCheckoutSessionId: sessionId },
       include: {
@@ -161,19 +161,159 @@ router.get("/session/:sessionId", async (req, res) => {
       },
     });
 
-    if (!order) {
+    if (order) {
+      // Verify the user is the buyer
+      if (order.buyerId !== req.user.id) {
+        return res.status(403).json({ error: "You do not have access to this order" });
+      }
+      return res.json({ order });
+    }
+
+    // If no single order found, try to find an order group (cart checkout)
+    const orderGroup = await prisma.orderGroup.findUnique({
+      where: { stripeCheckoutSessionId: sessionId },
+      include: {
+        orderItems: {
+          include: {
+            listing: true,
+            seller: {
+              select: { id: true, username: true },
+            },
+          },
+        },
+        buyer: {
+          select: { id: true, username: true },
+        },
+      },
+    });
+
+    if (!orderGroup) {
       return res.status(404).json({ error: "Order not found" });
     }
 
     // Verify the user is the buyer
-    if (order.buyerId !== req.user.id) {
+    if (orderGroup.buyerId !== req.user.id) {
       return res.status(403).json({ error: "You do not have access to this order" });
     }
 
-    res.json({ order });
+    res.json({ orderGroup });
   } catch (error) {
     console.error("Error fetching checkout session:", error);
     res.status(500).json({ error: "Failed to fetch order status" });
+  }
+});
+
+// POST /api/checkout/create-cart-session - Create Stripe Checkout Session for cart
+router.post("/create-cart-session", async (req, res) => {
+  try {
+    const { listingIds } = req.body;
+
+    if (!listingIds || !Array.isArray(listingIds) || listingIds.length === 0) {
+      return res.status(400).json({ error: "At least one listing ID is required" });
+    }
+
+    if (!req.user) {
+      return res.status(403).json({ error: "Profile setup required to make purchases" });
+    }
+
+    // Fetch all listings with seller info
+    const listings = await prisma.cardListing.findMany({
+      where: { id: { in: listingIds } },
+      include: {
+        seller: {
+          select: { id: true, username: true },
+        },
+      },
+    });
+
+    // Validate all listings exist
+    if (listings.length !== listingIds.length) {
+      return res.status(400).json({ error: "One or more listings not found" });
+    }
+
+    // Validate all listings are active and not owned by buyer
+    const errors = [];
+    for (const listing of listings) {
+      if (listing.status !== "ACTIVE") {
+        errors.push(`"${listing.cardName}" is no longer available`);
+      }
+      if (listing.sellerId === req.user.id) {
+        errors.push(`Cannot purchase your own listing "${listing.cardName}"`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({ error: errors.join(". ") });
+    }
+
+    // Calculate total amount
+    const totalAmount = listings.reduce((sum, listing) => sum + Number(listing.price), 0);
+
+    // Create OrderGroup with OrderItems in a transaction
+    const orderGroup = await prisma.$transaction(async (tx) => {
+      const group = await tx.orderGroup.create({
+        data: {
+          buyerId: req.user.id,
+          totalAmount: totalAmount,
+          status: "PENDING",
+          orderItems: {
+            create: listings.map((listing) => ({
+              listingId: listing.id,
+              sellerId: listing.sellerId,
+              amount: listing.price,
+            })),
+          },
+        },
+        include: {
+          orderItems: true,
+        },
+      });
+      return group;
+    });
+
+    // Get frontend URL for redirects
+    const frontendUrl = process.env.NODE_ENV === "production"
+      ? process.env.FRONTEND_URL
+      : "http://localhost:5173";
+
+    // Create Stripe Checkout Session with multiple line items
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: listings.map((listing) => ({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: listing.cardName,
+            description: `${listing.setName} - Sold by ${listing.seller.username}`,
+            images: listing.imageUrl ? [listing.imageUrl] : [],
+          },
+          unit_amount: Math.round(Number(listing.price) * 100), // Convert to cents
+        },
+        quantity: 1,
+      })),
+      metadata: {
+        orderGroupId: orderGroup.id,
+        buyerId: req.user.id,
+        listingIds: JSON.stringify(listingIds),
+      },
+      success_url: `${frontendUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/cart`,
+    });
+
+    // Update order group with Stripe session ID
+    await prisma.orderGroup.update({
+      where: { id: orderGroup.id },
+      data: { stripeCheckoutSessionId: session.id },
+    });
+
+    console.log(`🛒 Cart checkout session created - OrderGroup: ${orderGroup.id}, Items: ${listings.length}`);
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (error) {
+    console.error("Error creating cart checkout session:", error.message);
+    console.error("Full error:", error);
+    res.status(500).json({ error: error.message || "Failed to create checkout session" });
   }
 });
 
