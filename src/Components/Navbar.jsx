@@ -151,6 +151,14 @@ const Navbar = () => {
                     Profile
                   </Link>
 
+                  <Link
+                    to="/orders"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+                  >
+                    <Icon icon="mdi:receipt" className="h-4 w-4" />
+                    My Orders
+                  </Link>
+
                   {/* Seller Dashboard Link */}
                   {(profile?.role === "SELLER" || profile?.role === "ADMIN") && (
                     <Link
@@ -269,6 +277,14 @@ const Navbar = () => {
                 >
                   <Icon icon="mdi:account-circle" className="h-5 w-5" />
                   Profile
+                </Link>
+                <Link
+                  to="/orders"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  <Icon icon="mdi:receipt" className="h-5 w-5" />
+                  My Orders
                 </Link>
                 {(profile?.role === "SELLER" || profile?.role === "ADMIN") && (
                   <Link
