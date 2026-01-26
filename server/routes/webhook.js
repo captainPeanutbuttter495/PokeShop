@@ -51,8 +51,16 @@ async function handleCheckoutComplete(session) {
   console.log("📦 Processing checkout.session.completed");
   console.log("Session metadata:", session.metadata);
 
-  const { orderId, listingId } = session.metadata;
+  const { orderId, listingId, orderGroupId, buyerId, listingIds } = session.metadata;
 
+  // Handle cart checkout (OrderGroup)
+  if (orderGroupId) {
+    console.log(`✅ Cart payment completed for orderGroup: ${orderGroupId}`);
+    await handleCartCheckoutComplete(session, orderGroupId, buyerId, listingIds);
+    return;
+  }
+
+  // Handle single item checkout (Order)
   if (!orderId || !listingId) {
     console.error("❌ Missing orderId or listingId in session metadata!");
     return;
@@ -87,9 +95,65 @@ async function handleCheckoutComplete(session) {
   }
 }
 
-async function handleCheckoutExpired(session) {
-  const { orderId } = session.metadata;
+async function handleCartCheckoutComplete(session, orderGroupId, buyerId, listingIdsJson) {
+  try {
+    const listingIds = JSON.parse(listingIdsJson);
 
+    // Use transaction to ensure atomicity
+    await prisma.$transaction(async (tx) => {
+      // Update order group to COMPLETED
+      await tx.orderGroup.update({
+        where: { id: orderGroupId },
+        data: {
+          status: "COMPLETED",
+          stripePaymentIntentId: session.payment_intent,
+          paidAt: new Date(),
+        },
+      });
+
+      // Mark all listings as SOLD
+      await tx.cardListing.updateMany({
+        where: { id: { in: listingIds } },
+        data: { status: "SOLD" },
+      });
+
+      // Clear purchased items from user's cart
+      if (buyerId) {
+        await tx.cartItem.deleteMany({
+          where: {
+            userId: buyerId,
+            listingId: { in: listingIds },
+          },
+        });
+      }
+    });
+
+    console.log(`🛒 OrderGroup ${orderGroupId} completed, ${listingIds.length} listings marked as SOLD, cart cleared`);
+  } catch (error) {
+    console.error("Error processing cart checkout completion:", error);
+    throw error;
+  }
+}
+
+async function handleCheckoutExpired(session) {
+  const { orderId, orderGroupId } = session.metadata;
+
+  // Handle cart checkout expiration
+  if (orderGroupId) {
+    console.log(`⏰ Cart checkout expired for orderGroup: ${orderGroupId}`);
+    try {
+      await prisma.orderGroup.update({
+        where: { id: orderGroupId },
+        data: { status: "CANCELLED" },
+      });
+      console.log(`🚫 OrderGroup ${orderGroupId} cancelled due to expired checkout`);
+    } catch (error) {
+      console.error("Error handling cart checkout expiration:", error);
+    }
+    return;
+  }
+
+  // Handle single item checkout expiration
   if (!orderId) return;
 
   console.log(`⏰ Checkout expired for order: ${orderId}`);
