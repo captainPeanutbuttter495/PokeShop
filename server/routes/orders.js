@@ -8,13 +8,14 @@ const router = Router();
 // All routes require authentication
 router.use(authenticated);
 
-// GET /api/orders - Get buyer's order history
+// GET /api/orders - Get buyer's order history (includes both single orders and cart orders)
 router.get("/", async (req, res) => {
   try {
     if (!req.user) {
       return res.status(403).json({ error: "Profile setup required" });
     }
 
+    // Fetch single item orders
     const orders = await prisma.order.findMany({
       where: { buyerId: req.user.id },
       include: {
@@ -26,7 +27,23 @@ router.get("/", async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ orders });
+    // Fetch cart orders (order groups)
+    const orderGroups = await prisma.orderGroup.findMany({
+      where: { buyerId: req.user.id },
+      include: {
+        orderItems: {
+          include: {
+            listing: true,
+            seller: {
+              select: { id: true, username: true, favoritePokemon: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json({ orders, orderGroups });
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ error: "Failed to fetch orders" });
