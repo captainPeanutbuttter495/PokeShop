@@ -12,6 +12,7 @@ import sellerRoutes from "./routes/seller.js";
 import checkoutRoutes from "./routes/checkout.js";
 import webhookRoutes from "./routes/webhook.js";
 import orderRoutes from "./routes/orders.js";
+import cartRoutes from "./routes/cart.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -81,6 +82,7 @@ app.use("/api/seller", sellerRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/cart", cartRoutes);
 
 // ============================================
 // Pokemon TCG API Routes (with caching)
