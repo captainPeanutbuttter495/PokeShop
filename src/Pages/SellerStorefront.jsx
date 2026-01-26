@@ -4,18 +4,20 @@ import { useParams, Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Icon } from "@iconify/react";
 import { getSellerByUsername } from "../services/userApi";
-import { createCheckoutSession } from "../Services/checkoutApi";
 import { useUser } from "../context/UserContext";
+import { useCart } from "../context/CartContext";
 
 const SellerStorefront = () => {
   const { username } = useParams();
-  const { isAuthenticated, loginWithRedirect, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
   const { profile } = useUser();
+  const { addToCart, isInCart } = useCart();
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [purchasingId, setPurchasingId] = useState(null);
-  const [purchaseError, setPurchaseError] = useState(null);
+  const [addingId, setAddingId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     const fetchSeller = async () => {
@@ -42,9 +44,10 @@ const SellerStorefront = () => {
     }).format(price);
   };
 
-  // Handle buy now click
-  const handleBuyNow = async (listingId) => {
-    setPurchaseError(null);
+  // Handle add to cart click
+  const handleAddToCart = async (listing) => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
 
     if (!isAuthenticated) {
       loginWithRedirect();
@@ -52,15 +55,15 @@ const SellerStorefront = () => {
     }
 
     try {
-      setPurchasingId(listingId);
-      const { url, sessionId } = await createCheckoutSession(getAccessTokenSilently, listingId);
-      // Save session info to localStorage before redirecting
-      localStorage.setItem("pendingCheckout", JSON.stringify({ sessionId, listingId }));
-      // Redirect to Stripe Checkout
-      window.location.href = url;
+      setAddingId(listing.id);
+      await addToCart(listing);
+      setSuccessMessage(`${listing.cardName} added to cart!`);
+      // Auto-dismiss success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setPurchaseError(err.message);
-      setPurchasingId(null);
+      setErrorMessage(err.message);
+    } finally {
+      setAddingId(null);
     }
   };
 
@@ -187,31 +190,39 @@ const SellerStorefront = () => {
                       </span>
                     </div>
 
-                    {/* Buy Now Button */}
+                    {/* Add to Cart Button */}
                     {isOwnStore ? (
                       <div className="mt-3 rounded-lg bg-gray-100 py-2 text-center text-sm text-gray-500">
                         Your listing
                       </div>
+                    ) : isInCart(listing.id) ? (
+                      <Link
+                        to="/cart"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 py-2.5 font-medium text-white transition hover:bg-amber-600"
+                      >
+                        <Icon icon="mdi:cart-check" className="h-5 w-5" />
+                        In Cart - View
+                      </Link>
                     ) : (
                       <button
-                        onClick={() => handleBuyNow(listing.id)}
-                        disabled={purchasingId === listing.id}
+                        onClick={() => handleAddToCart(listing)}
+                        disabled={addingId === listing.id}
                         className="mt-3 w-full rounded-lg bg-emerald-600 py-2.5 font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {purchasingId === listing.id ? (
+                        {addingId === listing.id ? (
                           <span className="flex items-center justify-center gap-2">
                             <Icon icon="mdi:loading" className="h-5 w-5 animate-spin" />
-                            Processing...
+                            Adding...
                           </span>
                         ) : !isAuthenticated ? (
                           <span className="flex items-center justify-center gap-2">
                             <Icon icon="mdi:login" className="h-5 w-5" />
-                            Login to Purchase
+                            Login to Add to Cart
                           </span>
                         ) : (
                           <span className="flex items-center justify-center gap-2">
-                            <Icon icon="mdi:cart" className="h-5 w-5" />
-                            Buy Now
+                            <Icon icon="mdi:cart-plus" className="h-5 w-5" />
+                            Add to Cart
                           </span>
                         )}
                       </button>
@@ -223,13 +234,33 @@ const SellerStorefront = () => {
           )}
         </div>
 
-        {/* Purchase Error Toast */}
-        {purchaseError && (
+        {/* Success Toast */}
+        {successMessage && (
+          <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-lg bg-emerald-600 px-4 py-3 text-white shadow-lg">
+            <Icon icon="mdi:check-circle" className="h-5 w-5" />
+            <span>{successMessage}</span>
+            <Link
+              to="/cart"
+              className="ml-2 rounded bg-white/20 px-2 py-1 text-sm hover:bg-white/30"
+            >
+              View Cart
+            </Link>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="ml-1 hover:opacity-80"
+            >
+              <Icon icon="mdi:close" className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Error Toast */}
+        {errorMessage && (
           <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-lg bg-red-600 px-4 py-3 text-white shadow-lg">
             <Icon icon="mdi:alert-circle" className="h-5 w-5" />
-            <span>{purchaseError}</span>
+            <span>{errorMessage}</span>
             <button
-              onClick={() => setPurchaseError(null)}
+              onClick={() => setErrorMessage(null)}
               className="ml-2 hover:opacity-80"
             >
               <Icon icon="mdi:close" className="h-5 w-5" />
