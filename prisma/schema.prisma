@@ -49,6 +49,9 @@ model User {
   cardListings     CardListing[]   @relation("UserListings")
   buyerOrders      Order[]         @relation("BuyerOrders")
   sellerOrders     Order[]         @relation("SellerOrders")
+  cartItems        CartItem[]
+  buyerOrderGroups OrderGroup[]    @relation("BuyerOrderGroups")
+  sellerOrderItems OrderItem[]     @relation("SellerOrderItems")
 
   @@map("users")
 }
@@ -81,8 +84,10 @@ model CardListing {
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
 
-  seller User    @relation("UserListings", fields: [sellerId], references: [id], onDelete: Cascade)
-  orders Order[]
+  seller     User        @relation("UserListings", fields: [sellerId], references: [id], onDelete: Cascade)
+  orders     Order[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 
   @@map("card_listings")
 }
@@ -107,4 +112,52 @@ model Order {
   @@index([buyerId])
   @@index([sellerId])
   @@map("orders")
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  listingId String   @map("listing_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing CardListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("cart_items")
+}
+
+model OrderGroup {
+  id                      String      @id @default(uuid())
+  buyerId                 String      @map("buyer_id")
+  totalAmount             Decimal     @db.Decimal(10, 2)
+  status                  OrderStatus @default(PENDING)
+  stripeCheckoutSessionId String?     @unique @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String?     @unique @map("stripe_payment_intent_id")
+  paidAt                  DateTime?   @map("paid_at")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
+
+  buyer      User        @relation("BuyerOrderGroups", fields: [buyerId], references: [id])
+  orderItems OrderItem[]
+
+  @@index([buyerId])
+  @@map("order_groups")
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  orderGroupId String   @map("order_group_id")
+  listingId    String   @map("listing_id")
+  sellerId     String   @map("seller_id")
+  amount       Decimal  @db.Decimal(10, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  orderGroup OrderGroup  @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
+  listing    CardListing @relation(fields: [listingId], references: [id])
+  seller     User        @relation("SellerOrderItems", fields: [sellerId], references: [id])
+
+  @@index([orderGroupId])
+  @@index([sellerId])
+  @@map("order_items")
 }
