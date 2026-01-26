@@ -7,6 +7,10 @@ import cors from "cors";
 import userRoutes from "./routes/users.js";
 import adminRoutes from "./routes/admin.js";
 import sellerRoutes from "./routes/seller.js";
+import checkoutRoutes from "./routes/checkout.js";
+import webhookRoutes from "./routes/webhook.js";
+import orderRoutes from "./routes/orders.js";
+import cartRoutes from "./routes/cart.js";
 
 const app = express();
 
@@ -62,6 +66,11 @@ app.use(
     credentials: true,
   })
 );
+
+// Stripe webhook needs raw body for signature verification
+// Must be before express.json() middleware
+app.use("/api/webhook/stripe", express.raw({ type: "application/json" }));
+
 app.use(express.json());
 
 // Health check
@@ -73,6 +82,10 @@ app.get("/api/health", (req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/seller", sellerRoutes);
+app.use("/api/checkout", checkoutRoutes);
+app.use("/api/webhook", webhookRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Helper function to fetch with retries
 async function fetchWithRetry(url, options, maxRetries = 3) {
