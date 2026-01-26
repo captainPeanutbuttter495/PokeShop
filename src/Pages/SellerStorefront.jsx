@@ -1,14 +1,23 @@
 // src/Pages/SellerStorefront.jsx
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import { Icon } from "@iconify/react";
 import { getSellerByUsername } from "../services/userApi";
+import { useUser } from "../context/UserContext";
+import { useCart } from "../context/CartContext";
 
 const SellerStorefront = () => {
   const { username } = useParams();
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
+  const { profile } = useUser();
+  const { addToCart, isInCart } = useCart();
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [addingId, setAddingId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     const fetchSeller = async () => {
@@ -34,6 +43,32 @@ const SellerStorefront = () => {
       currency: "USD",
     }).format(price);
   };
+
+  // Handle add to cart click
+  const handleAddToCart = async (listing) => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!isAuthenticated) {
+      loginWithRedirect();
+      return;
+    }
+
+    try {
+      setAddingId(listing.id);
+      await addToCart(listing);
+      setSuccessMessage(`${listing.cardName} added to cart!`);
+      // Auto-dismiss success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setErrorMessage(err.message);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  // Check if user owns this store
+  const isOwnStore = profile?.id === seller?.id;
 
   // Loading state
   if (loading) {
@@ -154,12 +189,84 @@ const SellerStorefront = () => {
                         Listed {new Date(listing.createdAt).toLocaleDateString()}
                       </span>
                     </div>
+
+                    {/* Add to Cart Button */}
+                    {isOwnStore ? (
+                      <div className="mt-3 rounded-lg bg-gray-100 py-2 text-center text-sm text-gray-500">
+                        Your listing
+                      </div>
+                    ) : isInCart(listing.id) ? (
+                      <Link
+                        to="/cart"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 py-2.5 font-medium text-white transition hover:bg-amber-600"
+                      >
+                        <Icon icon="mdi:cart-check" className="h-5 w-5" />
+                        In Cart - View
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToCart(listing)}
+                        disabled={addingId === listing.id}
+                        className="mt-3 w-full rounded-lg bg-emerald-600 py-2.5 font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {addingId === listing.id ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Icon icon="mdi:loading" className="h-5 w-5 animate-spin" />
+                            Adding...
+                          </span>
+                        ) : !isAuthenticated ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Icon icon="mdi:login" className="h-5 w-5" />
+                            Login to Add to Cart
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center gap-2">
+                            <Icon icon="mdi:cart-plus" className="h-5 w-5" />
+                            Add to Cart
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Success Toast */}
+        {successMessage && (
+          <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-lg bg-emerald-600 px-4 py-3 text-white shadow-lg">
+            <Icon icon="mdi:check-circle" className="h-5 w-5" />
+            <span>{successMessage}</span>
+            <Link
+              to="/cart"
+              className="ml-2 rounded bg-white/20 px-2 py-1 text-sm hover:bg-white/30"
+            >
+              View Cart
+            </Link>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="ml-1 hover:opacity-80"
+            >
+              <Icon icon="mdi:close" className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Error Toast */}
+        {errorMessage && (
+          <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-lg bg-red-600 px-4 py-3 text-white shadow-lg">
+            <Icon icon="mdi:alert-circle" className="h-5 w-5" />
+            <span>{errorMessage}</span>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="ml-2 hover:opacity-80"
+            >
+              <Icon icon="mdi:close" className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
