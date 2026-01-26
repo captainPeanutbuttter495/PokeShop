@@ -10,6 +10,8 @@ import Profile from "./Pages/Profile";
 import AdminDashboard from "./Pages/AdminDashboard";
 import SellerDashboard from "./Pages/SellerDashboard";
 import SellerStorefront from "./Pages/SellerStorefront";
+import CheckoutSuccess from "./Pages/CheckoutSuccess";
+import OrderHistory from "./Pages/OrderHistory";
 
 const App = () => {
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
@@ -24,6 +26,8 @@ const App = () => {
         redirect_uri: window.location.origin,
         audience: audience,
       }}
+      cacheLocation="localstorage"
+      useRefreshTokens={true}
     >
       <UserProvider>
         <BrowserRouter>
@@ -37,6 +41,8 @@ const App = () => {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/seller" element={<SellerDashboard />} />
+                <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                <Route path="/orders" element={<OrderHistory />} />
               </Routes>
             </main>
             <Footer />
