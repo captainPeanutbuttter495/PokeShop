@@ -5,8 +5,9 @@ const API_BASE = import.meta.env.VITE_API_URL
 // Frontend cache - persists across component mounts
 const cardCache = new Map();
 
-// Only fetch fields needed by the UI (reduces payload size significantly)
-const CARD_SELECT_FIELDS = "id,name,rarity,images,set,tcgplayer";
+// Removed select parameter - fetching full card data to avoid API errors
+// The Pokemon TCG API has issues with partial nested object selection
+const CARD_SELECT_FIELDS = null;
 
 /**
  * Fetch a single card by its ID
@@ -19,9 +20,11 @@ export async function getCard(id) {
     return cardCache.get(id);
   }
 
-  const response = await fetch(
-    `${API_BASE}/cards/${id}?select=${CARD_SELECT_FIELDS}`
-  );
+  const url = CARD_SELECT_FIELDS
+    ? `${API_BASE}/cards/${id}?select=${CARD_SELECT_FIELDS}`
+    : `${API_BASE}/cards/${id}`;
+
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch card: ${response.status}`);
@@ -53,8 +56,8 @@ export async function searchCards(params = {}) {
   return response.json();
 }
 
-// Only fetch fields needed by the UI for sets
-const SET_SELECT_FIELDS = "id,name,images";
+// Removed select parameter for sets as well
+const SET_SELECT_FIELDS = null;
 
 /**
  * Fetch a single set by its ID
@@ -62,9 +65,11 @@ const SET_SELECT_FIELDS = "id,name,images";
  * @returns {Promise<object>} The set data
  */
 export async function getSet(id) {
-  const response = await fetch(
-    `${API_BASE}/sets/${id}?select=${SET_SELECT_FIELDS}`
-  );
+  const url = SET_SELECT_FIELDS
+    ? `${API_BASE}/sets/${id}?select=${SET_SELECT_FIELDS}`
+    : `${API_BASE}/sets/${id}`;
+
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch set: ${response.status}`);
