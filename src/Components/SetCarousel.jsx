@@ -1,23 +1,18 @@
 // src/Components/SetCarousel.jsx
-import { useMemo } from "react";
-import { useSets } from "../hooks/useSets";
-
-// Featured set IDs
-const FEATURED_SET_IDS = [
-  "sm12",    // Sun & Moon Cosmic Eclipse
-  "swsh45",  // Shining Fates
-  "swsh7",   // Sword & Shield Evolving Skies
-  "cel25",   // Celebrations
-  "swsh9",   // Sword & Shield Brilliant Stars
-  "sv3pt5",  // Scarlet & Violet 151
-  "sv8pt5",  // Scarlet & Violet Prismatic Evolutions
-];
+import { useQuery } from "@tanstack/react-query";
+import { getFeaturedSets } from "../Services/featuredApi";
 
 const SetCarousel = () => {
-  const setIds = useMemo(() => FEATURED_SET_IDS, []);
-  const { sets, loading, error } = useSets(setIds);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["featured-sets"],
+    queryFn: getFeaturedSets,
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour
+  });
 
-  if (loading) {
+  const sets = data?.sets || [];
+
+  if (isLoading) {
     return (
       <section className="overflow-hidden bg-slate-900 py-6 sm:py-12">
         <div className="flex gap-4 sm:gap-8">
