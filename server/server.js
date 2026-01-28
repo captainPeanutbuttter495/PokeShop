@@ -17,10 +17,11 @@ import cartRoutes from "./routes/cart.js";
 const app = express();
 const port = process.env.PORT || 3001;
 
-const POKEMON_API_BASE = "https://api.pokemontcg.io/v2";
-const API_KEY = process.env.POKEMON_API_KEY;
+// S3 Cache Configuration
+const S3_BUCKET = process.env.AWS_S3_BUCKET || "pokeshop-card-images";
+const S3_BASE_URL = `https://${S3_BUCKET}.s3.amazonaws.com`;
 
-// In-memory cache (persists while server is running)
+// In-memory cache for S3 data (persists while server is running)
 const cache = new Map();
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 
@@ -85,178 +86,62 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 
 // ============================================
-// Pokemon TCG API Routes (with caching)
+// Featured Cards/Sets Routes (S3 cached data)
 // ============================================
 
-// Helper function to fetch with retries
-async function fetchWithRetry(url, options, maxRetries = 3) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-
-      if (response.ok) {
-        return response;
-      }
-
-      if ((response.status === 504 || response.status === 503) && attempt < maxRetries) {
-        console.log(`⚠️ Attempt ${attempt} failed with ${response.status}, retrying...`);
-        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
-        continue;
-      }
-
-      throw new Error(`Pokemon API responded with ${response.status}`);
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      console.log(`⚠️ Attempt ${attempt} failed: ${error.message}, retrying...`);
-      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
-    }
-  }
-}
-
-// Get a single card by ID
-app.get("/api/cards/:id", async (req, res) => {
+// Get featured cards from S3 cache
+app.get("/api/featured-cards", async (req, res) => {
   try {
-    const { id } = req.params;
-    const { select } = req.query;
-
-    // Include select in cache key so different field selections are cached separately
-    const cacheKey = select ? `card:${id}:${select}` : `card:${id}`;
+    const cacheKey = "featured-cards";
 
     const cached = getCached(cacheKey);
     if (cached) {
-      console.log(`✅ Cache hit for card: ${id}`);
+      console.log("✅ Cache hit for featured cards");
       return res.json(cached);
     }
 
-    // Build URL with select parameter if provided
-    const url = select
-      ? `${POKEMON_API_BASE}/cards/${id}?select=${select}`
-      : `${POKEMON_API_BASE}/cards/${id}`;
+    console.log("⏳ Fetching featured cards from S3...");
+    const response = await fetch(`${S3_BASE_URL}/cache/featured-cards.json`);
 
-    console.log(`⏳ Fetching card from API: ${id}`);
-    const startTime = Date.now();
-
-    const response = await fetchWithRetry(url, {
-      headers: {
-        "X-Api-Key": API_KEY,
-      },
-    });
+    if (!response.ok) {
+      throw new Error(`S3 responded with ${response.status}`);
+    }
 
     const data = await response.json();
-    const elapsed = Date.now() - startTime;
-    console.log(`✅ Fetched card in ${elapsed}ms: ${id}`);
-
     setCache(cacheKey, data);
+    console.log("✅ Featured cards loaded from S3");
     res.json(data);
   } catch (error) {
-    console.error("Error fetching card:", error);
-    res.status(500).json({ error: "Failed to fetch card data" });
+    console.error("Error fetching featured cards:", error);
+    res.status(500).json({ error: "Failed to fetch featured cards" });
   }
 });
 
-// Search cards with query
-app.get("/api/cards", async (req, res) => {
+// Get featured sets from S3 cache
+app.get("/api/featured-sets", async (req, res) => {
   try {
-    const queryParams = new URLSearchParams(req.query).toString();
-    const cacheKey = `cards:${queryParams}`;
+    const cacheKey = "featured-sets";
 
     const cached = getCached(cacheKey);
     if (cached) {
-      console.log(`✅ Cache hit for search: ${queryParams}`);
+      console.log("✅ Cache hit for featured sets");
       return res.json(cached);
     }
 
-    const url = queryParams
-      ? `${POKEMON_API_BASE}/cards?${queryParams}`
-      : `${POKEMON_API_BASE}/cards`;
+    console.log("⏳ Fetching featured sets from S3...");
+    const response = await fetch(`${S3_BASE_URL}/cache/featured-sets.json`);
 
-    console.log(`⏳ Searching cards from API: ${queryParams}`);
-    const startTime = Date.now();
-
-    const response = await fetchWithRetry(url, {
-      headers: {
-        "X-Api-Key": API_KEY,
-      },
-    });
-
-    const data = await response.json();
-    const elapsed = Date.now() - startTime;
-    console.log(`✅ Search completed in ${elapsed}ms`);
-
-    setCache(cacheKey, data);
-    res.json(data);
-  } catch (error) {
-    console.error("Error searching cards:", error);
-    res.status(500).json({ error: "Failed to search cards" });
-  }
-});
-
-// Get a single set by ID
-app.get("/api/sets/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { select } = req.query;
-
-    // Include select in cache key so different field selections are cached separately
-    const cacheKey = select ? `set:${id}:${select}` : `set:${id}`;
-
-    const cached = getCached(cacheKey);
-    if (cached) {
-      console.log(`✅ Cache hit for set: ${id}`);
-      return res.json(cached);
+    if (!response.ok) {
+      throw new Error(`S3 responded with ${response.status}`);
     }
 
-    // Build URL with select parameter if provided
-    const url = select
-      ? `${POKEMON_API_BASE}/sets/${id}?select=${select}`
-      : `${POKEMON_API_BASE}/sets/${id}`;
-
-    console.log(`⏳ Fetching set from API: ${id}`);
-    const response = await fetchWithRetry(url, {
-      headers: {
-        "X-Api-Key": API_KEY,
-      },
-    });
-
     const data = await response.json();
     setCache(cacheKey, data);
+    console.log("✅ Featured sets loaded from S3");
     res.json(data);
   } catch (error) {
-    console.error("Error fetching set:", error);
-    res.status(500).json({ error: "Failed to fetch set data" });
-  }
-});
-
-// Get all sets
-app.get("/api/sets", async (req, res) => {
-  try {
-    const queryParams = new URLSearchParams(req.query).toString();
-    const cacheKey = `sets:${queryParams}`;
-
-    const cached = getCached(cacheKey);
-    if (cached) {
-      console.log(`✅ Cache hit for sets`);
-      return res.json(cached);
-    }
-
-    const url = queryParams
-      ? `${POKEMON_API_BASE}/sets?${queryParams}`
-      : `${POKEMON_API_BASE}/sets`;
-
-    const response = await fetchWithRetry(url, {
-      headers: {
-        "X-Api-Key": API_KEY,
-      },
-    });
-
-    const data = await response.json();
-    setCache(cacheKey, data);
-    res.json(data);
-  } catch (error) {
-    console.error("Error fetching sets:", error);
-    res.status(500).json({ error: "Failed to fetch sets" });
+    console.error("Error fetching featured sets:", error);
+    res.status(500).json({ error: "Failed to fetch featured sets" });
   }
 });
 
