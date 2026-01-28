@@ -3,25 +3,54 @@ const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : "http://localhost:3001/api";
 
-// Helper to make authenticated requests
-async function authFetch(endpoint, getAccessToken, options = {}) {
+// Helper for public endpoints with retry for cold starts
+async function fetchWithRetry(url, options = {}, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (err) {
+      if (attempt < retries && (err.message === "Failed to fetch" || err.message.includes("NetworkError"))) {
+        console.log(`Retrying request (attempt ${attempt + 2}/${retries + 1})...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+// Helper to make authenticated requests with retry for cold starts
+async function authFetch(endpoint, getAccessToken, options = {}, retries = 2) {
   const token = await getAccessToken();
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          ...options.headers,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Request failed" }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (err) {
+      // Retry on network errors (like CORS failures from cold start timeouts)
+      if (attempt < retries && (err.message === "Failed to fetch" || err.message.includes("NetworkError"))) {
+        console.log(`Retrying request to ${endpoint} (attempt ${attempt + 2}/${retries + 1})...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
   }
-
-  return response.json();
 }
 
 // ============================================
@@ -47,7 +76,7 @@ export async function updateProfile(getAccessToken, data) {
 }
 
 export async function checkUsername(username) {
-  const response = await fetch(`${API_BASE}/users/check-username/${encodeURIComponent(username)}`);
+  const response = await fetchWithRetry(`${API_BASE}/users/check-username/${encodeURIComponent(username)}`);
   return response.json();
 }
 
@@ -57,7 +86,7 @@ export async function checkUsername(username) {
  */
 export async function getSellers(excludeId = null) {
   const query = excludeId ? `?exclude=${excludeId}` : "";
-  const response = await fetch(`${API_BASE}/users/sellers${query}`);
+  const response = await fetchWithRetry(`${API_BASE}/users/sellers${query}`);
   if (!response.ok) {
     throw new Error("Failed to fetch sellers");
   }
@@ -69,7 +98,7 @@ export async function getSellers(excludeId = null) {
  * @param {string} username - The seller's username
  */
 export async function getSellerByUsername(username) {
-  const response = await fetch(`${API_BASE}/users/sellers/${encodeURIComponent(username)}`);
+  const response = await fetchWithRetry(`${API_BASE}/users/sellers/${encodeURIComponent(username)}`);
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error("Seller not found");
