@@ -14,8 +14,9 @@ import cartRoutes from "./routes/cart.js";
 
 const app = express();
 
-const POKEMON_API_BASE = "https://api.pokemontcg.io/v2";
-const API_KEY = process.env.POKEMON_API_KEY;
+// S3 Cache Configuration
+const S3_BUCKET = process.env.AWS_S3_BUCKET || "pokeshop-card-images";
+const S3_BASE_URL = `https://${S3_BUCKET}.s3.amazonaws.com`;
 
 // In-memory cache (resets on cold starts, but persists across warm invocations)
 const cache = new Map();
@@ -50,6 +51,20 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 console.log("CORS allowed origins:", allowedOrigins);
+
+// Handle preflight OPTIONS requests explicitly (before any other middleware)
+// This ensures CORS preflight always succeeds even if other middleware errors
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.some((allowed) => origin === allowed || origin.startsWith(allowed))) {
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Allow-Credentials", "true");
+    res.set("Access-Control-Max-Age", "86400");
+  }
+  res.status(204).send();
+});
 
 app.use(
   cors({
@@ -87,139 +102,57 @@ app.use("/api/webhook", webhookRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 
-// Helper function to fetch with retries
-async function fetchWithRetry(url, options, maxRetries = 3) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, options);
+// ============================================
+// Featured Cards/Sets Routes (S3 cached data)
+// ============================================
 
-      if (response.ok) {
-        return response;
-      }
-
-      if (
-        (response.status === 504 || response.status === 503) &&
-        attempt < maxRetries
-      ) {
-        console.log(
-          `Attempt ${attempt} failed with ${response.status}, retrying...`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
-        continue;
-      }
-
-      throw new Error(`Pokemon API responded with ${response.status}`);
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      console.log(`Attempt ${attempt} failed: ${error.message}, retrying...`);
-      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
-    }
-  }
-}
-
-// Get a single card by ID
-app.get("/api/cards/:id", async (req, res) => {
+// Get featured cards from S3 cache
+app.get("/api/featured-cards", async (req, res) => {
   try {
-    const { id } = req.params;
-    const cacheKey = `card:${id}`;
+    const cacheKey = "featured-cards";
 
     const cached = getCached(cacheKey);
     if (cached) {
       return res.json(cached);
     }
 
-    const response = await fetchWithRetry(`${POKEMON_API_BASE}/cards/${id}`, {
-      headers: { "X-Api-Key": API_KEY },
-    });
+    const response = await fetch(`${S3_BASE_URL}/cache/featured-cards.json`);
+
+    if (!response.ok) {
+      throw new Error(`S3 responded with ${response.status}`);
+    }
 
     const data = await response.json();
     setCache(cacheKey, data);
     res.json(data);
   } catch (error) {
-    console.error("Error fetching card:", error);
-    res.status(500).json({ error: "Failed to fetch card data" });
+    console.error("Error fetching featured cards:", error);
+    res.status(500).json({ error: "Failed to fetch featured cards" });
   }
 });
 
-// Search cards with query
-app.get("/api/cards", async (req, res) => {
+// Get featured sets from S3 cache
+app.get("/api/featured-sets", async (req, res) => {
   try {
-    const queryParams = new URLSearchParams(req.query).toString();
-    const cacheKey = `cards:${queryParams}`;
+    const cacheKey = "featured-sets";
 
     const cached = getCached(cacheKey);
     if (cached) {
       return res.json(cached);
     }
 
-    const url = queryParams
-      ? `${POKEMON_API_BASE}/cards?${queryParams}`
-      : `${POKEMON_API_BASE}/cards`;
+    const response = await fetch(`${S3_BASE_URL}/cache/featured-sets.json`);
 
-    const response = await fetchWithRetry(url, {
-      headers: { "X-Api-Key": API_KEY },
-    });
-
-    const data = await response.json();
-    setCache(cacheKey, data);
-    res.json(data);
-  } catch (error) {
-    console.error("Error searching cards:", error);
-    res.status(500).json({ error: "Failed to search cards" });
-  }
-});
-
-// Get a single set by ID
-app.get("/api/sets/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const cacheKey = `set:${id}`;
-
-    const cached = getCached(cacheKey);
-    if (cached) {
-      return res.json(cached);
+    if (!response.ok) {
+      throw new Error(`S3 responded with ${response.status}`);
     }
 
-    const response = await fetchWithRetry(`${POKEMON_API_BASE}/sets/${id}`, {
-      headers: { "X-Api-Key": API_KEY },
-    });
-
     const data = await response.json();
     setCache(cacheKey, data);
     res.json(data);
   } catch (error) {
-    console.error("Error fetching set:", error);
-    res.status(500).json({ error: "Failed to fetch set data" });
-  }
-});
-
-// Get all sets
-app.get("/api/sets", async (req, res) => {
-  try {
-    const queryParams = new URLSearchParams(req.query).toString();
-    const cacheKey = `sets:${queryParams}`;
-
-    const cached = getCached(cacheKey);
-    if (cached) {
-      return res.json(cached);
-    }
-
-    const url = queryParams
-      ? `${POKEMON_API_BASE}/sets?${queryParams}`
-      : `${POKEMON_API_BASE}/sets`;
-
-    const response = await fetchWithRetry(url, {
-      headers: { "X-Api-Key": API_KEY },
-    });
-
-    const data = await response.json();
-    setCache(cacheKey, data);
-    res.json(data);
-  } catch (error) {
-    console.error("Error fetching sets:", error);
-    res.status(500).json({ error: "Failed to fetch sets" });
+    console.error("Error fetching featured sets:", error);
+    res.status(500).json({ error: "Failed to fetch featured sets" });
   }
 });
 
