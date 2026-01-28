@@ -1,19 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
-import { useCards } from "../hooks/useCards";
-import { getBestPrice, formatPrice } from "../services/pokemonApi";
-
-// 5 iconic Base Set cards for the carousel
-const BASE_SET_CARD_IDS = [
-  "base1-4", // Charizard
-  "base1-2", // Blastoise
-  "base1-15", // Venusaur
-  "base1-10", // Mewtwo
-  "base1-16", // Zapdos
-];
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getFeaturedCards, formatPrice } from "../Services/featuredApi";
 
 const Hero = () => {
-  const cardIds = useMemo(() => BASE_SET_CARD_IDS, []);
-  const { cards, loading, error } = useCards(cardIds);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["featured-cards"],
+    queryFn: getFeaturedCards,
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  const cards = data?.cards || [];
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Auto-rotate carousel every 3 seconds
@@ -27,7 +24,7 @@ const Hero = () => {
     return () => clearInterval(interval);
   }, [cards.length]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <section className="flex min-h-[50vh] items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 sm:min-h-[70vh]">
         <div className="flex items-center gap-2 sm:gap-8">
@@ -49,7 +46,7 @@ const Hero = () => {
       <section className="flex min-h-[50vh] items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4 sm:min-h-[70vh]">
         <div className="text-center text-red-400">
           <p className="text-base sm:text-lg">Failed to load featured cards</p>
-          <p className="text-xs text-slate-500 sm:text-sm">{error}</p>
+          <p className="text-xs text-slate-500 sm:text-sm">{error.message}</p>
         </div>
       </section>
     );
@@ -69,7 +66,6 @@ const Hero = () => {
 
   const visibleCards = getVisibleCards();
   const centerCard = visibleCards[1]?.card;
-  const centerPrice = centerCard ? getBestPrice(centerCard.tcgplayer) : null;
 
   return (
     <section className="relative flex min-h-[50vh] flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 sm:min-h-[70vh]">
@@ -127,13 +123,13 @@ const Hero = () => {
           <p className="mt-1 text-xs text-slate-400 sm:text-sm">
             {centerCard.set.name} · {centerCard.rarity}
           </p>
-          {centerPrice && (
+          {centerCard.price && (
             <>
               <p className="mt-2 text-2xl font-bold text-amber-400 sm:mt-4 sm:text-3xl md:text-4xl">
-                {formatPrice(centerPrice.price)}
+                {formatPrice(centerCard.price.value)}
               </p>
               <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-500 sm:text-xs">
-                Market Price ({centerPrice.type.replace(/([A-Z])/g, " $1").trim()})
+                Market Price ({centerCard.price.type.replace(/([A-Z])/g, " $1").trim()})
               </p>
             </>
           )}
