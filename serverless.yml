@@ -5,13 +5,12 @@ provider:
   runtime: nodejs20.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  memorySize: 512
+  memorySize: 1024
   timeout: 30
 
   environment:
     NODE_ENV: production
     DATABASE_URL: ${env:DATABASE_URL}
-    POKEMON_API_KEY: ${env:POKEMON_API_KEY}
     AUTH0_DOMAIN: ${env:AUTH0_DOMAIN}
     AUTH0_AUDIENCE: ${env:AUTH0_AUDIENCE}
     FRONTEND_URL: ${env:FRONTEND_URL}
@@ -65,6 +64,14 @@ functions:
       - httpApi:
           path: /
           method: ANY
+      # Keep Lambda warm - ping every 5 minutes
+      - schedule:
+          rate: rate(5 minutes)
+          input:
+            httpMethod: GET
+            path: /api/health
+            headers:
+              x-warmup: "true"
     # If you later move Lambda into a VPC, uncomment and provide values
     # vpc:
     #   securityGroupIds:
