@@ -60,3 +60,6 @@ dist-lambda.zip
 
 # Claude Code
 .claude/
+
+# Local cache (populate-cache.js output)
+.cache/
