@@ -17,7 +17,8 @@
     "deploy": "npm run deploy:backend && npm run deploy:frontend",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "serverless:local": "serverless offline"
+    "serverless:local": "serverless offline",
+    "populate-cache": "node scripts/populate-cache.js"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.11.0",
