@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
     base: '/',
     define: {
       // Make env variables available if needed
+    },
+    test: {
+      globals: true,
+      environment: 'node',
     }
   }
 })
