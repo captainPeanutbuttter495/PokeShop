@@ -19,7 +19,7 @@ const MOCK_CARDS = {
       name: "Charizard",
       rarity: "Rare",
       set: { name: "Base Set" },
-      images: { small: "https://example.com/charizard.png" },
+      images: { small: "https://pokeshop-card-images.s3.amazonaws.com/images/cards/charizard.png" },
       price: { value: 461.32, type: "holofoil", source: "TCGPlayer" },
     },
     {
@@ -27,7 +27,7 @@ const MOCK_CARDS = {
       name: "Blastoise",
       rarity: "Rare",
       set: { name: "Base Set" },
-      images: { small: "https://example.com/blastoise.png" },
+      images: { small: "https://pokeshop-card-images.s3.amazonaws.com/images/cards/blastoise.png" },
       price: { value: 164.65, type: "holofoil", source: "TCGPlayer" },
     },
     {
@@ -35,7 +35,7 @@ const MOCK_CARDS = {
       name: "Venusaur",
       rarity: "Rare",
       set: { name: "Base Set" },
-      images: { small: "https://example.com/venusaur.png" },
+      images: { small: "https://pokeshop-card-images.s3.amazonaws.com/images/cards/venusaur.png" },
       price: { value: 132.65, type: "holofoil", source: "TCGPlayer" },
     },
     {
@@ -43,7 +43,7 @@ const MOCK_CARDS = {
       name: "Mewtwo",
       rarity: "Rare",
       set: { name: "Base Set" },
-      images: { small: "https://example.com/mewtwo.png" },
+      images: { small: "https://pokeshop-card-images.s3.amazonaws.com/images/cards/mewtwo.png" },
       price: { value: 51.51, type: "holofoil", source: "TCGPlayer" },
     },
     {
@@ -51,7 +51,7 @@ const MOCK_CARDS = {
       name: "Zapdos",
       rarity: "Rare",
       set: { name: "Base Set" },
-      images: { small: "https://example.com/zapdos.png" },
+      images: { small: "https://pokeshop-card-images.s3.amazonaws.com/images/cards/zapdos.png" },
       price: null,
     },
   ],
