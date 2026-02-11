@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import { server } from "./msw/server";
 
 // Bridge Vitest's timer API for React Testing Library.
 // RTL's asyncWrapper calls `jest.advanceTimersByTime(0)` to flush a
@@ -8,3 +9,9 @@ import "@testing-library/jest-dom";
 globalThis.jest = {
   advanceTimersByTime: (...args) => vi.advanceTimersByTime(...args),
 };
+
+// MSW lifecycle — intercepts fetch at the network level for integration tests.
+// Unit tests using vi.mock() are unaffected (they never reach real fetch).
+beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
