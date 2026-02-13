@@ -107,7 +107,7 @@ describe("SellerStorefront", () => {
       loginWithRedirect: vi.fn(),
     });
     useUser.mockReturnValue({ profile: null });
-    useCart.mockReturnValue({ addToCart: vi.fn(), isInCart: () => false });
+    useCart.mockReturnValue({ addToCart: vi.fn(), isInCart: vi.fn(() => false) });
   });
 
   afterEach(() => {
@@ -172,5 +172,65 @@ describe("SellerStorefront", () => {
 
     expect(await screen.findByText("No cards available right now")).toBeInTheDocument();
     expect(screen.getByText("Check back later for new listings!")).toBeInTheDocument();
+  });
+
+  // ── Listing CTA branching ──────────────────────────────────────
+
+  describe("Listing CTA branching", () => {
+    it('shows "Your listing" when the viewer owns the store', async () => {
+      useUser.mockReturnValue({ profile: { id: "seller-1" } });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      renderStorefront();
+
+      await screen.findByText("Charizard VMAX");
+
+      const labels = screen.getAllByText("Your listing");
+      expect(labels).toHaveLength(2);
+    });
+
+    it('shows "In Cart - View" link to /cart when listing is already in cart', async () => {
+      useCart.mockReturnValue({ addToCart: vi.fn(), isInCart: vi.fn(() => true) });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      renderStorefront();
+
+      await screen.findByText("Charizard VMAX");
+
+      const cartLinks = screen.getAllByRole("link", { name: /in cart - view/i });
+      expect(cartLinks).toHaveLength(2);
+      expect(cartLinks[0]).toHaveAttribute("href", "/cart");
+      expect(cartLinks[1]).toHaveAttribute("href", "/cart");
+    });
+
+    it('shows "Login to Add to Cart" when user is not authenticated', async () => {
+      useAuth0.mockReturnValue({
+        isAuthenticated: false,
+        loginWithRedirect: vi.fn(),
+      });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      renderStorefront();
+
+      await screen.findByText("Charizard VMAX");
+
+      const buttons = screen.getAllByRole("button", { name: /login to add to cart/i });
+      expect(buttons).toHaveLength(2);
+    });
+
+    it('shows "Add to Cart" when user is authenticated and listing is not in cart', async () => {
+      useAuth0.mockReturnValue({
+        isAuthenticated: true,
+        loginWithRedirect: vi.fn(),
+      });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      renderStorefront();
+
+      await screen.findByText("Charizard VMAX");
+
+      const buttons = screen.getAllByRole("button", { name: /add to cart/i });
+      expect(buttons).toHaveLength(2);
+    });
   });
 });
