@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useUser } from "../context/UserContext";
@@ -231,6 +232,92 @@ describe("SellerStorefront", () => {
 
       const buttons = screen.getAllByRole("button", { name: /add to cart/i });
       expect(buttons).toHaveLength(2);
+    });
+  });
+
+  // ── Add to cart interaction + toasts ────────────────────────────
+
+  describe("Add to cart interaction", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("calls loginWithRedirect without calling addToCart when not authenticated", async () => {
+      const mockLogin = vi.fn();
+      const mockAddToCart = vi.fn();
+      useAuth0.mockReturnValue({ isAuthenticated: false, loginWithRedirect: mockLogin });
+      useCart.mockReturnValue({ addToCart: mockAddToCart, isInCart: vi.fn(() => false) });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      const user = userEvent.setup();
+      renderStorefront();
+      await screen.findByText("Charizard VMAX");
+
+      await user.click(screen.getAllByRole("button", { name: /login to add to cart/i })[0]);
+
+      expect(mockLogin).toHaveBeenCalledOnce();
+      expect(mockAddToCart).not.toHaveBeenCalled();
+    });
+
+    it('disables button and shows "Adding…" then success toast on add', async () => {
+      let resolveAdd;
+      const mockAddToCart = vi.fn(() => new Promise((r) => { resolveAdd = r; }));
+      useAuth0.mockReturnValue({ isAuthenticated: true, loginWithRedirect: vi.fn() });
+      useCart.mockReturnValue({ addToCart: mockAddToCart, isInCart: vi.fn(() => false) });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      const user = userEvent.setup();
+      renderStorefront();
+      await screen.findByText("Charizard VMAX");
+
+      const button = screen.getAllByRole("button", { name: /add to cart/i })[0];
+      await user.click(button);
+
+      // While addToCart is pending: button disabled, "Adding..." visible
+      expect(button).toBeDisabled();
+      expect(screen.getByText("Adding...")).toBeInTheDocument();
+
+      // Resolve → success toast appears
+      resolveAdd();
+      expect(await screen.findByText("Charizard VMAX added to cart!")).toBeInTheDocument();
+    });
+
+    it("auto-dismisses success toast after 3 seconds", async () => {
+      vi.useFakeTimers();
+      const mockAddToCart = vi.fn().mockResolvedValue();
+      useAuth0.mockReturnValue({ isAuthenticated: true, loginWithRedirect: vi.fn() });
+      useCart.mockReturnValue({ addToCart: mockAddToCart, isInCart: vi.fn(() => false) });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderStorefront();
+      await screen.findByText("Charizard VMAX");
+
+      await user.click(screen.getAllByRole("button", { name: /add to cart/i })[0]);
+      expect(await screen.findByText("Charizard VMAX added to cart!")).toBeInTheDocument();
+
+      // Advance past the 3-second auto-dismiss timeout
+      await act(() => { vi.advanceTimersByTime(3000); });
+
+      expect(screen.queryByText("Charizard VMAX added to cart!")).not.toBeInTheDocument();
+    });
+
+    it("shows error toast on failure and close button dismisses it", async () => {
+      const mockAddToCart = vi.fn().mockRejectedValue(new Error("Out of stock"));
+      useAuth0.mockReturnValue({ isAuthenticated: true, loginWithRedirect: vi.fn() });
+      useCart.mockReturnValue({ addToCart: mockAddToCart, isInCart: vi.fn(() => false) });
+      getSellerByUsername.mockResolvedValue(SELLER_WITH_LISTINGS);
+
+      const user = userEvent.setup();
+      renderStorefront();
+      await screen.findByText("Charizard VMAX");
+
+      await user.click(screen.getAllByRole("button", { name: /add to cart/i })[0]);
+      expect(await screen.findByText("Out of stock")).toBeInTheDocument();
+
+      // Close button dismisses the error toast
+      await user.click(screen.getByTestId("icon-mdi:close").closest("button"));
+      expect(screen.queryByText("Out of stock")).not.toBeInTheDocument();
     });
   });
 });
